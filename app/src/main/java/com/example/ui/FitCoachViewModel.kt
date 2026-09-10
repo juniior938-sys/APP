@@ -1,0 +1,487 @@
+package com.example.ui
+
+import android.app.Application
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.local.AppDatabase
+import com.example.data.model.UserProfile
+import com.example.data.model.WeightLogEntity
+import com.example.data.model.WorkoutDay
+import com.example.data.model.WorkoutExercise
+import com.example.data.model.WorkoutHistoryEntity
+import com.example.data.repository.FitnessRepository
+import com.example.data.repository.StreakStats
+import com.example.domain.CoachEngine
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+class FitCoachViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = AppDatabase.getDatabase(application)
+    private val repository = FitnessRepository(db.userDao(), db.workoutDao())
+
+    val userProfile: StateFlow<UserProfile> = repository.userProfileFlow
+        .combine(MutableStateFlow(Unit)) { profile, _ ->
+            profile ?: UserProfile()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UserProfile()
+        )
+
+    private val _weeklyPlan = MutableStateFlow<List<WorkoutDay>>(emptyList())
+    val weeklyPlan: StateFlow<List<WorkoutDay>> = _weeklyPlan.asStateFlow()
+
+    private val _isGeneratingPlan = MutableStateFlow(false)
+    val isGeneratingPlan: StateFlow<Boolean> = _isGeneratingPlan.asStateFlow()
+
+    val workoutHistory: StateFlow<List<WorkoutHistoryEntity>> = repository.workoutHistoryFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val streakStats: StateFlow<StreakStats> = combine(
+        workoutHistory,
+        userProfile
+    ) { history, profile ->
+        repository.computeStreakStats(history, profile.fitnessLevel)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StreakStats()
+    )
+
+    val weightLogs: StateFlow<List<WeightLogEntity>> = repository.weightLogsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _activeWorkout = MutableStateFlow<WorkoutDay?>(null)
+    val activeWorkout: StateFlow<WorkoutDay?> = _activeWorkout.asStateFlow()
+
+    private val _activeExercisesState = MutableStateFlow<List<WorkoutExercise>>(emptyList())
+    val activeExercisesState: StateFlow<List<WorkoutExercise>> = _activeExercisesState.asStateFlow()
+
+    private val _restTimerSeconds = MutableStateFlow(0)
+    val restTimerSeconds: StateFlow<Int> = _restTimerSeconds.asStateFlow()
+
+    private val _totalRestDuration = MutableStateFlow(0)
+    val totalRestDuration: StateFlow<Int> = _totalRestDuration.asStateFlow()
+
+    private val _isTimerRunning = MutableStateFlow(false)
+    val isTimerRunning: StateFlow<Boolean> = _isTimerRunning.asStateFlow()
+
+    private var timerJob: Job? = null
+    private var workoutElapsedJob: Job? = null
+
+    // Water tracking & active session duration
+    private val _waterConsumedMl = MutableStateFlow(0)
+    val waterConsumedMl: StateFlow<Int> = _waterConsumedMl.asStateFlow()
+
+    private val _workoutElapsedSeconds = MutableStateFlow(0)
+    val workoutElapsedSeconds: StateFlow<Int> = _workoutElapsedSeconds.asStateFlow()
+
+    // Popups requested by user
+    private val _showWaterReminderPopup = MutableStateFlow(false)
+    val showWaterReminderPopup: StateFlow<Boolean> = _showWaterReminderPopup.asStateFlow()
+
+    private val _showGymAlarmPopup = MutableStateFlow(false)
+    val showGymAlarmPopup: StateFlow<Boolean> = _showGymAlarmPopup.asStateFlow()
+
+    private val _showMembershipPopup = MutableStateFlow(false)
+    val showMembershipPopup: StateFlow<Boolean> = _showMembershipPopup.asStateFlow()
+
+    // Vídeo de Entrada da Academia Ampla Fitness
+    private val _showEntranceVideo = MutableStateFlow(true)
+    val showEntranceVideo: StateFlow<Boolean> = _showEntranceVideo.asStateFlow()
+
+    // Bloqueio de Mensalidade (só ativa após o primeiro cadastro)
+    private val _isMembershipBlocked = MutableStateFlow(false)
+    val isMembershipBlocked: StateFlow<Boolean> = _isMembershipBlocked.asStateFlow()
+
+    init {
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            val profile = repository.getUserProfile()
+            val plan = repository.getParsedWeeklyPlan()
+            _weeklyPlan.value = plan
+            // Verifica bloqueio de mensalidade após primeiro cadastro
+            if (profile.isFirstSetupDone && (profile.isMembershipBlocked || profile.gymMembershipStatus == "Bloqueado")) {
+                _isMembershipBlocked.value = true
+            }
+        }
+    }
+
+    fun updateProfile(newProfile: UserProfile, regeneratePlanNow: Boolean = true) {
+        viewModelScope.launch {
+            _isGeneratingPlan.value = true
+            repository.saveUserProfile(newProfile.copy(hasCompletedOnboarding = true))
+            if (regeneratePlanNow) {
+                delay(400) // Smooth UX feedback
+                val updatedPlan = repository.regeneratePlan(newProfile)
+                _weeklyPlan.value = updatedPlan
+            }
+            _isGeneratingPlan.value = false
+        }
+    }
+
+    fun regeneratePlan() {
+        viewModelScope.launch {
+            _isGeneratingPlan.value = true
+            val profile = repository.getUserProfile()
+            delay(500)
+            val updatedPlan = repository.regeneratePlan(profile)
+            _weeklyPlan.value = updatedPlan
+            _isGeneratingPlan.value = false
+        }
+    }
+
+    fun startWorkoutSession(day: WorkoutDay) {
+        _activeWorkout.value = day
+        _activeExercisesState.value = day.exercises.map { it.copy(isCompleted = false) }
+        _waterConsumedMl.value = 0
+        _workoutElapsedSeconds.value = 0
+        resetRestTimer()
+
+        // Start tracking elapsed workout duration & periodic water reminder
+        workoutElapsedJob?.cancel()
+        workoutElapsedJob = viewModelScope.launch {
+            val intervalSec = (userProfile.value.waterReminderIntervalMinutes.coerceAtLeast(3)) * 60
+            while (_activeWorkout.value != null) {
+                delay(1000)
+                _workoutElapsedSeconds.value = _workoutElapsedSeconds.value + 1
+                if (userProfile.value.waterReminderEnabled &&
+                    _workoutElapsedSeconds.value > 0 &&
+                    _workoutElapsedSeconds.value % intervalSec == 0
+                ) {
+                    _showWaterReminderPopup.value = true
+                    vibrateDevice()
+                }
+            }
+        }
+    }
+
+    fun drinkWater(ml: Int = 250) {
+        _waterConsumedMl.value = _waterConsumedMl.value + ml
+        _showWaterReminderPopup.value = false
+        vibrateDevice()
+    }
+
+    fun dismissWaterReminderPopup() {
+        _showWaterReminderPopup.value = false
+    }
+
+    fun triggerWaterReminderManual() {
+        _showWaterReminderPopup.value = true
+        vibrateDevice()
+    }
+
+    fun triggerWaterReminderNow() {
+        triggerWaterReminderManual()
+    }
+
+    fun triggerGymAlarm() {
+        _showGymAlarmPopup.value = true
+        vibrateDevice()
+    }
+
+    fun triggerGymAlarmNow() {
+        triggerGymAlarm()
+    }
+
+    fun dismissGymAlarm() {
+        _showGymAlarmPopup.value = false
+    }
+
+    fun snoozeGymAlarm(minutes: Int = 10) {
+        _showGymAlarmPopup.value = false
+        viewModelScope.launch {
+            delay(minutes * 60 * 1000L)
+            _showGymAlarmPopup.value = true
+            vibrateDevice()
+        }
+    }
+
+    fun dismissEntranceVideo() {
+        _showEntranceVideo.value = false
+    }
+
+    fun replayEntranceVideo() {
+        _showEntranceVideo.value = true
+    }
+
+    fun triggerMembershipPopup() {
+        _showMembershipPopup.value = true
+        vibrateDevice()
+    }
+
+    fun triggerMembershipReminderNow() {
+        triggerMembershipPopup()
+    }
+
+    fun dismissMembershipPopup() {
+        _showMembershipPopup.value = false
+    }
+
+    fun blockMembershipManually() {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                isMembershipBlocked = true,
+                gymMembershipStatus = "Bloqueado",
+                isFirstSetupDone = true
+            )
+            repository.saveUserProfile(updated)
+            _isMembershipBlocked.value = true
+            vibrateDevice()
+        }
+    }
+
+    fun unblockWithAdminPin(enteredPin: String): Boolean {
+        val current = userProfile.value
+        val expectedPin = current.adminPin.ifBlank { "123456" }
+        if (enteredPin == expectedPin) {
+            viewModelScope.launch {
+                val updated = current.copy(
+                    isMembershipBlocked = false,
+                    gymMembershipStatus = "Em dia",
+                    lastPaymentDateMillis = System.currentTimeMillis()
+                )
+                repository.saveUserProfile(updated)
+                _isMembershipBlocked.value = false
+                vibrateDevice()
+            }
+            return true
+        } else {
+            vibrateDevice()
+            return false
+        }
+    }
+
+    fun updateAdminPin(newPin: String): Boolean {
+        if (newPin.length == 6 && newPin.all { it.isDigit() }) {
+            viewModelScope.launch {
+                val current = userProfile.value
+                val updated = current.copy(adminPin = newPin)
+                repository.saveUserProfile(updated)
+            }
+            return true
+        }
+        return false
+    }
+
+    fun markGymMembershipPaid() {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                gymMembershipStatus = "Em dia",
+                isMembershipBlocked = false,
+                lastPaymentDateMillis = System.currentTimeMillis()
+            )
+            repository.saveUserProfile(updated)
+            _showMembershipPopup.value = false
+            _isMembershipBlocked.value = false
+        }
+    }
+
+    fun updateGymMembership(
+        gymName: String,
+        fee: String,
+        dueDay: Int,
+        status: String,
+        reminderEnabled: Boolean
+    ) {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                gymName = gymName,
+                gymMembershipFee = fee,
+                gymMembershipDueDay = dueDay,
+                gymMembershipStatus = status,
+                gymMembershipReminderEnabled = reminderEnabled
+            )
+            repository.saveUserProfile(updated)
+        }
+    }
+
+    fun updateGymAlarm(
+        hour: Int,
+        minute: Int,
+        days: String,
+        alarmEnabled: Boolean
+    ) {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                gymAlarmHour = hour,
+                gymAlarmMinute = minute,
+                gymAlarmDays = days,
+                gymAlarmEnabled = alarmEnabled
+            )
+            repository.saveUserProfile(updated)
+        }
+    }
+
+    fun updateWaterSettings(
+        intervalMinutes: Int,
+        enabled: Boolean
+    ) {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                waterReminderIntervalMinutes = intervalMinutes,
+                waterReminderEnabled = enabled
+            )
+            repository.saveUserProfile(updated)
+        }
+    }
+
+    fun toggleExerciseCompleted(exerciseId: String) {
+        val current = _activeExercisesState.value.toMutableList()
+        val index = current.indexOfFirst { it.id == exerciseId }
+        if (index != -1) {
+            val item = current[index]
+            val newState = !item.isCompleted
+            current[index] = item.copy(isCompleted = newState)
+            _activeExercisesState.value = current
+
+            // If checked as completed and has rest time, auto-trigger rest timer
+            if (newState && item.restSeconds > 0) {
+                startRestTimer(item.restSeconds)
+            }
+        }
+    }
+
+    fun startRestTimer(seconds: Int) {
+        timerJob?.cancel()
+        _totalRestDuration.value = seconds
+        _restTimerSeconds.value = seconds
+        _isTimerRunning.value = true
+
+        timerJob = viewModelScope.launch {
+            while (_restTimerSeconds.value > 0 && _isTimerRunning.value) {
+                delay(1000)
+                _restTimerSeconds.value = _restTimerSeconds.value - 1
+            }
+            if (_restTimerSeconds.value == 0 && _isTimerRunning.value) {
+                _isTimerRunning.value = false
+                vibrateDevice()
+            }
+        }
+    }
+
+    fun pauseResumeTimer() {
+        if (_isTimerRunning.value) {
+            _isTimerRunning.value = false
+            timerJob?.cancel()
+        } else if (_restTimerSeconds.value > 0) {
+            _isTimerRunning.value = true
+            timerJob = viewModelScope.launch {
+                while (_restTimerSeconds.value > 0 && _isTimerRunning.value) {
+                    delay(1000)
+                    _restTimerSeconds.value = _restTimerSeconds.value - 1
+                }
+                if (_restTimerSeconds.value == 0) {
+                    _isTimerRunning.value = false
+                    vibrateDevice()
+                }
+            }
+        }
+    }
+
+    fun addTimerSeconds(extraSeconds: Int) {
+        _restTimerSeconds.value = _restTimerSeconds.value + extraSeconds
+        _totalRestDuration.value = _totalRestDuration.value.coerceAtLeast(_restTimerSeconds.value)
+    }
+
+    fun resetRestTimer() {
+        timerJob?.cancel()
+        _isTimerRunning.value = false
+        _restTimerSeconds.value = 0
+        _totalRestDuration.value = 0
+    }
+
+    private fun vibrateDevice() {
+        try {
+            val context = getApplication<Application>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(
+                    VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(500)
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun completeWorkoutSession(notes: String = "") {
+        val workout = _activeWorkout.value ?: return
+        val exercises = _activeExercisesState.value
+        val completedCount = exercises.count { it.isCompleted }
+        val totalCount = exercises.size
+
+        viewModelScope.launch {
+            repository.logCompletedWorkout(
+                dayNumber = workout.dayNumber,
+                workoutTitle = workout.name,
+                durationMinutes = workout.durationMinutes,
+                completedExercisesCount = completedCount,
+                totalExercisesCount = totalCount,
+                notes = notes
+            )
+            // Update plan day completed status
+            val currentPlan = _weeklyPlan.value.toMutableList()
+            val dayIdx = currentPlan.indexOfFirst { it.dayNumber == workout.dayNumber }
+            if (dayIdx != -1) {
+                currentPlan[dayIdx] = currentPlan[dayIdx].copy(isCompletedThisWeek = true)
+                _weeklyPlan.value = currentPlan
+            }
+            dismissActiveWorkout()
+        }
+    }
+
+    fun dismissActiveWorkout() {
+        resetRestTimer()
+        workoutElapsedJob?.cancel()
+        _activeWorkout.value = null
+        _activeExercisesState.value = emptyList()
+        _workoutElapsedSeconds.value = 0
+    }
+
+    fun logWeight(weight: Float) {
+        viewModelScope.launch {
+            val profile = repository.getUserProfile()
+            repository.logWeight(weight, profile.heightCm)
+        }
+    }
+
+    fun deleteHistoryItem(id: Long) {
+        viewModelScope.launch {
+            repository.deleteWorkoutHistory(id)
+        }
+    }
+}

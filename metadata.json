@@ -1,0 +1,6 @@
+{
+  "name": "Ampla Fitness",
+  "description": "App de treinos da Academia Ampla Fitness com vídeo de entrada, bloqueio de mensalidade com senha de administrador de 6 dígitos, lembrete de hidratação, alarmes de horário e controle de IMC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
