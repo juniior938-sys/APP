@@ -9,12 +9,14 @@ import android.os.VibratorManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.model.ChatMessage
 import com.example.data.model.UserProfile
 import com.example.data.model.WeightLogEntity
 import com.example.data.model.WorkoutDay
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutHistoryEntity
 import com.example.data.repository.FitnessRepository
+import com.example.data.repository.GeminiChatRepository
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
 import kotlinx.coroutines.Job
@@ -116,6 +118,22 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
     private val _isMembershipBlocked = MutableStateFlow(false)
     val isMembershipBlocked: StateFlow<Boolean> = _isMembershipBlocked.asStateFlow()
 
+    // Chat Ampla Personal IA (Gemini 3.5 Flash)
+    private val geminiChatRepository = GeminiChatRepository()
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
+        listOf(
+            ChatMessage(
+                text = "Olá! Sou o Ampla Personal IA, seu assistente oficial da Academia Ampla. Posso tirar dúvidas sobre postura correta dos exercícios, horários de treino, dicas de desempenho, plano de alimentação, dietas e recuperação muscular. Como posso te orientar hoje?",
+                isUser = false
+            )
+        )
+    )
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+
+    private val _isChatLoading = MutableStateFlow(false)
+    val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
+
     init {
         loadInitialData()
     }
@@ -129,6 +147,7 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
             if (profile.isFirstSetupDone && (profile.isMembershipBlocked || profile.gymMembershipStatus == "Bloqueado")) {
                 _isMembershipBlocked.value = true
             }
+            checkAutomaticMembershipReminder(profile)
         }
     }
 
@@ -136,6 +155,12 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _isGeneratingPlan.value = true
             repository.saveUserProfile(newProfile.copy(hasCompletedOnboarding = true))
+            if (newProfile.isFirstSetupDone && (newProfile.isMembershipBlocked || newProfile.gymMembershipStatus == "Bloqueado")) {
+                _isMembershipBlocked.value = true
+            } else {
+                _isMembershipBlocked.value = false
+            }
+            checkAutomaticMembershipReminder(newProfile)
             if (regeneratePlanNow) {
                 delay(400) // Smooth UX feedback
                 val updatedPlan = repository.regeneratePlan(newProfile)
@@ -224,10 +249,32 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
 
     fun dismissEntranceVideo() {
         _showEntranceVideo.value = false
+        checkAutomaticMembershipReminder()
     }
 
     fun replayEntranceVideo() {
         _showEntranceVideo.value = true
+    }
+
+    fun checkAutomaticMembershipReminder(profile: UserProfile? = null) {
+        val prof = profile ?: userProfile.value
+        if (prof.isFirstSetupDone && (prof.isMembershipBlocked || prof.gymMembershipStatus == "Bloqueado")) {
+            _isMembershipBlocked.value = true
+            return
+        }
+
+        if (!prof.gymMembershipReminderEnabled) return
+
+        val calendar = java.util.Calendar.getInstance()
+        val currentDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+
+        val isStatusAlert = prof.gymMembershipStatus == "Vence em breve" || prof.gymMembershipStatus == "Pendente"
+        val diff = prof.gymMembershipDueDay - currentDay
+        val isDueDayNear = diff in -5..3
+
+        if (isStatusAlert || isDueDayNear) {
+            _showMembershipPopup.value = true
+        }
     }
 
     fun triggerMembershipPopup() {
@@ -483,5 +530,42 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.deleteWorkoutHistory(id)
         }
+    }
+
+    fun sendChatMessage(userText: String) {
+        val trimmed = userText.trim()
+        if (trimmed.isBlank() || _isChatLoading.value) return
+
+        val userMessage = ChatMessage(text = trimmed, isUser = true)
+        _chatMessages.value = _chatMessages.value + userMessage
+
+        viewModelScope.launch {
+            _isChatLoading.value = true
+            try {
+                val history = _chatMessages.value.filter { it.id != userMessage.id }
+                val profile = userProfile.value
+                val responseText = geminiChatRepository.sendMessage(trimmed, history, profile)
+                val assistantMessage = ChatMessage(text = responseText, isUser = false)
+                _chatMessages.value = _chatMessages.value + assistantMessage
+            } catch (e: Exception) {
+                val errorMessage = ChatMessage(
+                    text = "Desculpe, tive uma instabilidade momentânea na conexão. Lembre-se: preserve sempre a postura e execute os movimentos com controle. Como posso te orientar agora?",
+                    isUser = false
+                )
+                _chatMessages.value = _chatMessages.value + errorMessage
+            } finally {
+                _isChatLoading.value = false
+            }
+        }
+    }
+
+    fun clearChatHistory() {
+        val name = userProfile.value.name
+        _chatMessages.value = listOf(
+            ChatMessage(
+                text = "Conversa reiniciada! Olá, $name. Sou o Ampla Personal IA. Pode tirar dúvidas sobre treinos, horários, posturas, dietas e recuperação na Academia Ampla. No que posso te ajudar?",
+                isUser = false
+            )
+        )
     }
 }

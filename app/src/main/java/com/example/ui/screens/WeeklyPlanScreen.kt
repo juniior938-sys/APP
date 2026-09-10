@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,9 +56,11 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
 import com.example.data.model.WorkoutDay
 import com.example.data.model.WorkoutExercise
+import com.example.ui.components.ExerciseThumbnailBadge
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
+import com.example.ui.theme.DiscreetAppGradient
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.NeonOrange
 import com.example.ui.theme.NeonOrangeGlow
@@ -83,7 +85,7 @@ fun WeeklyPlanScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack),
+            .background(DiscreetAppGradient),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -157,7 +159,7 @@ fun WeeklyPlanScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(weeklyPlan, key = { it.dayNumber }) { day ->
+                    itemsIndexed(weeklyPlan, key = { index, day -> "plan_day_${index}_${day.dayNumber}_${day.name.hashCode()}" }) { index, day ->
                         val isExpanded = expandedStates[day.dayNumber] ?: (day.dayNumber == 1)
 
                         WorkoutDayCard(
@@ -375,79 +377,95 @@ private fun ExerciseItemView(index: Int, exercise: WorkoutExercise) {
         border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Miniatura Desenho / Ilustração gráfica do Exercício para melhor identificação
+            ExerciseThumbnailBadge(
+                exerciseName = exercise.name,
+                equipment = exercise.equipment,
+                size = 48.dp
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "$index.",
+                            fontWeight = FontWeight.Bold,
+                            color = NeonRed,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = exercise.name,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhitePrimary
+                            )
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = NeonOrange.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = exercise.equipment,
+                            color = NeonOrange,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "$index.",
-                        fontWeight = FontWeight.Bold,
-                        color = NeonRed,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = exercise.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Bold,
+                        text = "${exercise.sets} Séries",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
                             color = TextWhitePrimary
                         )
                     )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = NeonOrange.copy(alpha = 0.15f)
-                ) {
                     Text(
-                        text = exercise.equipment,
-                        color = NeonOrange,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = "${exercise.reps}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextWhitePrimary
+                        )
                     )
+                    if (exercise.restSeconds > 0) {
+                        Text(
+                            text = "${exercise.restSeconds}s descanso",
+                            style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteSecondary)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "${exercise.sets} Séries",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextWhitePrimary
-                    )
-                )
-                Text(
-                    text = "${exercise.reps}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextWhitePrimary
-                    )
-                )
-                if (exercise.restSeconds > 0) {
+                if (exercise.tips.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${exercise.restSeconds}s descanso",
-                        style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteSecondary)
+                        text = "Dica: ${exercise.tips}",
+                        style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
                     )
                 }
-            }
-
-            if (exercise.tips.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Dica: ${exercise.tips}",
-                    style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
-                )
             }
         }
     }

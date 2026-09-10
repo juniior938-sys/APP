@@ -27,6 +27,19 @@ val TextWhitePrimary = Color(0xFFFFFFFF)
 val TextWhiteSecondary = Color(0xFFA1A1AA)
 val TextWhiteMuted = Color(0xFF71717A)
 
+// Discreto Degradê Três Cores: Preto, Cinza Grafite, Vermelho Sutil
+val GradientBlack = Color(0xFF0A0A0C)
+val GradientCharcoalGray = Color(0xFF18181D)
+val GradientSubtleRed = Color(0xFF280B12)
+
+val DiscreetAppGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+    colors = listOf(
+        GradientBlack,
+        GradientCharcoalGray,
+        GradientSubtleRed
+    )
+)
+
 // Status & Accents
 val NeonGold = Color(0xFFFFB800)
 val NeonGreen = Color(0xFF10B981)

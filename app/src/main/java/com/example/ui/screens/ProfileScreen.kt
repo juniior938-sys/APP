@@ -24,8 +24,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Home
@@ -70,10 +72,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
+import com.example.ui.components.DigitalDueDatePickerDialog
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurface
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
+import com.example.ui.theme.DiscreetAppGradient
 import com.example.ui.theme.NeonBlue
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.NeonOrange
@@ -118,6 +122,7 @@ fun ProfileScreen(
     var gymStatus by remember(userProfile) { mutableStateOf(userProfile.gymMembershipStatus) }
     var gymReminderEnabled by remember(userProfile) { mutableStateOf(userProfile.gymMembershipReminderEnabled) }
     var adminPin by remember(userProfile) { mutableStateOf(userProfile.adminPin) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     // Alarme e Horário
     var gymHour by remember(userProfile) { mutableIntStateOf(userProfile.gymAlarmHour) }
@@ -154,7 +159,7 @@ fun ProfileScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack),
+            .background(DiscreetAppGradient),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -293,33 +298,54 @@ fun ProfileScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Data de Vencimento com Calendário Digital Editável
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = BlackSurfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Dia do Vencimento: Todo dia $gymDueDay",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextWhitePrimary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(5, 10, 15, 20).forEach { day ->
-                                FilterChip(
-                                    selected = gymDueDay == day,
-                                    onClick = { gymDueDay = day },
-                                    label = { Text("Dia $day", fontSize = 12.sp) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = NeonRed,
-                                        selectedLabelColor = TextWhitePrimary,
-                                        containerColor = BlackSurfaceElevated,
-                                        labelColor = TextWhiteSecondary
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Vencimento da Mensalidade:",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
+                                )
+                                Text(
+                                    text = "Todo dia $gymDueDay de cada mês",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        color = NeonRed,
+                                        fontWeight = FontWeight.Bold
                                     )
+                                )
+                            }
+
+                            Button(
+                                onClick = { showDatePicker = true },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
+                                modifier = Modifier.testTag("open_calendar_picker_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = "Abrir Calendário",
+                                    tint = TextWhitePrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Calendário",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = TextWhitePrimary
                                 )
                             }
                         }
@@ -410,114 +436,57 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Campo de Senha do Administrador (6 dígitos)
-                    OutlinedTextField(
-                        value = adminPin,
-                        onValueChange = { input ->
-                            if (input.length <= 6 && input.all { it.isDigit() }) {
-                                adminPin = input
-                            }
-                        },
-                        label = { Text("Senha do Administrador (6 dígitos)", color = TextWhiteSecondary) },
-                        placeholder = { Text("123456", color = TextWhiteMuted) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Key,
-                                contentDescription = null,
-                                tint = NeonRed
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextWhitePrimary,
-                            unfocusedTextColor = TextWhitePrimary,
-                            focusedBorderColor = NeonRed,
-                            unfocusedBorderColor = BlackBorder
-                        )
-                    )
-
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Botão para testar / abrir o Popup de Mensalidade
-                    Button(
-                        onClick = onTriggerMembershipPopup,
+                    // Status de Alerta e Bloqueio Automáticos
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = BlackSurfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("test_payment_popup_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonRed)
+                            .testTag("auto_alert_status_card")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = null,
-                            tint = TextWhitePrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Testar Popup de Mensalidade",
-                            fontWeight = FontWeight.Bold,
-                            color = TextWhitePrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Botão para Bloquear o App com a tela de bloqueio
-                    OutlinedButton(
-                        onClick = onTriggerBlock,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("test_block_screen_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, NeonRed),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = NeonRed,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Bloquear App (Testar Bloqueio & Senha 6 Dígitos)",
-                            fontWeight = FontWeight.Bold,
-                            color = NeonRed
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Botão para assistir o vídeo de entrada da Academia Ampla Fitness
-                    OutlinedButton(
-                        onClick = onReplayEntranceVideo,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("replay_video_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonOrange),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonOrange)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayCircle,
-                            contentDescription = null,
-                            tint = NeonOrange,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Assistir Vídeo de Entrada (Ampla Fitness)",
-                            fontWeight = FontWeight.Bold,
-                            color = NeonOrange
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(NeonGreen.copy(alpha = 0.15f), androidx.compose.foundation.shape.CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = NeonGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Alertas Automáticos Ativos",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextWhitePrimary
+                                    )
+                                )
+                                Text(
+                                    text = if (gymReminderEnabled)
+                                        "O popup de aviso e o bloqueio são acionados automaticamente pelo status e no vencimento (todo dia $gymDueDay)."
+                                    else
+                                        "Lembretes desativados. Ative a chave acima para receber os avisos automáticos.",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = TextWhiteSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1102,6 +1071,16 @@ fun ProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (showDatePicker) {
+            DigitalDueDatePickerDialog(
+                initialDay = gymDueDay,
+                onDaySelected = { day ->
+                    gymDueDay = day
+                },
+                onDismiss = { showDatePicker = false }
+            )
         }
     }
 }

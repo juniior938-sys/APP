@@ -18,13 +18,13 @@ class ExampleRobolectricTest {
   fun `read string from context`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("FitAI Coach", appName)
+    assertEquals("AMPLA PERSONAL IA", appName)
   }
 
   @Test
   fun `bmi calculation test`() {
     val profile = UserProfile(weightKg = 70f, heightCm = 175f)
     assertEquals(22.9f, profile.bmi, 0.1f)
-    assertEquals("Normal", profile.bmiCategory.label)
+    assertEquals("Peso Saudável", profile.bmiCategory.label)
   }
 }

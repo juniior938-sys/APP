@@ -57,15 +57,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.ChatMessage
 import com.example.data.model.UserProfile
 import com.example.data.model.WorkoutDay
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
+import com.example.ui.components.AmplaPersonalChatCard
 import com.example.ui.components.BmiCard
 import com.example.ui.components.StreakCard
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
+import com.example.ui.theme.DiscreetAppGradient
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.NeonOrange
 import com.example.ui.theme.NeonOrangeGlow
@@ -81,6 +84,10 @@ fun DashboardScreen(
     userProfile: UserProfile,
     streakStats: StreakStats,
     weeklyPlan: List<WorkoutDay>,
+    chatMessages: List<ChatMessage> = emptyList(),
+    isChatLoading: Boolean = false,
+    onSendMessage: (String) -> Unit = {},
+    onClearChat: () -> Unit = {},
     onStartWorkout: (WorkoutDay) -> Unit,
     onLogWeight: (Float) -> Unit,
     onNavigateToPlan: () -> Unit,
@@ -103,7 +110,7 @@ fun DashboardScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack),
+            .background(DiscreetAppGradient),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -123,8 +130,8 @@ fun DashboardScreen(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "FitAI Coach",
-                            fontSize = 26.sp,
+                            text = "AMPLA PERSONAL IA",
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
                             color = TextWhitePrimary
                         )
@@ -191,6 +198,14 @@ fun DashboardScreen(
                     }
                 }
             }
+
+            // CHAT AMPLA PERSONAL IA (ABAIXO DOS SUB-TÍTULOS NA PÁGINA DE INÍCIO)
+            AmplaPersonalChatCard(
+                messages = chatMessages,
+                isLoading = isChatLoading,
+                onSendMessage = onSendMessage,
+                onClearChat = onClearChat
+            )
 
             // BARRA RÁPIDA: ALARME DA ACADEMIA & MENSALIDADE
             Row(

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,6 +52,7 @@ import com.example.data.repository.StreakStats
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
+import com.example.ui.theme.DiscreetAppGradient
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.NeonOrange
 import com.example.ui.theme.NeonOrangeGlow
@@ -80,7 +81,7 @@ fun HistoryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack),
+            .background(DiscreetAppGradient),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -205,7 +206,7 @@ fun HistoryScreen(
                         )
                     }
 
-                    items(workoutHistory, key = { it.id }) { log ->
+                    itemsIndexed(workoutHistory, key = { index, log -> "workout_history_${index}_${log.id}" }) { _, log ->
                         WorkoutHistoryItemCard(
                             log = log,
                             formattedDate = dateFormatter.format(Date(log.timestampMillis)),
@@ -225,7 +226,7 @@ fun HistoryScreen(
                             )
                         }
 
-                        items(weightLogs.take(5), key = { it.id }) { weightLog ->
+                        itemsIndexed(weightLogs.take(5), key = { index, weightLog -> "weight_log_${index}_${weightLog.id}" }) { _, weightLog ->
                             WeightLogItemCard(
                                 weightLog = weightLog,
                                 formattedDate = dateFormatter.format(Date(weightLog.timestampMillis))

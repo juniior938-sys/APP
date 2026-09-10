@@ -104,6 +104,10 @@ fun FitCoachApp(
     val showEntranceVideo by viewModel.showEntranceVideo.collectAsStateWithLifecycle()
     val isMembershipBlocked by viewModel.isMembershipBlocked.collectAsStateWithLifecycle()
 
+    // Chat Ampla Personal IA
+    val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
+    val isChatLoading by viewModel.isChatLoading.collectAsStateWithLifecycle()
+
     var currentTab by remember { mutableStateOf(FitCoachTab.DASHBOARD) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -265,6 +269,10 @@ fun FitCoachApp(
                             userProfile = userProfile,
                             streakStats = streakStats,
                             weeklyPlan = weeklyPlan,
+                            chatMessages = chatMessages,
+                            isChatLoading = isChatLoading,
+                            onSendMessage = { text -> viewModel.sendChatMessage(text) },
+                            onClearChat = { viewModel.clearChatHistory() },
                             onStartWorkout = { day -> viewModel.startWorkoutSession(day) },
                             onLogWeight = { weight ->
                                 viewModel.logWeight(weight)

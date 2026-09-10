@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "FitAI Coach"
+rootProject.name = "AMPLA PERSONAL IA"
 
 include(":app")

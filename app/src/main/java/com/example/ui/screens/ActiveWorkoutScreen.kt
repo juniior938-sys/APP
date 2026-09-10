@@ -65,11 +65,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.WorkoutDay
 import com.example.data.model.WorkoutExercise
+import com.example.ui.components.ExerciseThumbnailBadge
 import com.example.ui.components.RestTimerCard
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurface
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
+import com.example.ui.theme.DiscreetAppGradient
 import com.example.ui.theme.NeonBlue
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.NeonOrange
@@ -221,7 +223,7 @@ fun ActiveWorkoutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(PureBlack),
+                .background(DiscreetAppGradient),
             contentAlignment = Alignment.TopCenter
         ) {
             Column(
@@ -368,7 +370,7 @@ fun ActiveWorkoutScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    itemsIndexed(exercises, key = { _, item -> item.id }) { index, item ->
+                    itemsIndexed(exercises, key = { index, item -> "active_ex_${index}_${item.id}" }) { index, item ->
                         ActiveExerciseCard(
                             index = index + 1,
                             exercise = item,
@@ -538,6 +540,14 @@ private fun ActiveExerciseCard(
             )
 
             Spacer(modifier = Modifier.width(8.dp))
+
+            ExerciseThumbnailBadge(
+                exerciseName = exercise.name,
+                equipment = exercise.equipment,
+                size = 42.dp
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
