@@ -25,6 +25,8 @@ data class UserProfile(
     val gymMembershipStatus: String = "Em dia", // "Em dia", "Vence em breve", "Pendente", "Bloqueado"
     val gymMembershipReminderEnabled: Boolean = true,
     val lastPaymentDateMillis: Long = System.currentTimeMillis() - (28L * 24 * 60 * 60 * 1000L),
+    val lastMembershipPromptDate: String = "", // Data "YYYY-MM-DD" da última notificação/popup diário exibido
+    val lastPaidBillingCycle: String = "", // Ciclo "YYYY-MM" confirmado pago pelo atleta
     val isMembershipBlocked: Boolean = false,
     val adminPin: String = "123456", // Senha de 6 dígitos do Administrador
     val isFirstSetupDone: Boolean = true, // Ativa bloqueio somente após o primeiro cadastro

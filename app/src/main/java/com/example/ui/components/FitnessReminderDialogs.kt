@@ -71,13 +71,17 @@ fun GymPaymentReminderDialog(
     onConfirmPayment: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val cal = remember { java.util.Calendar.getInstance() }
+    val currentDay = remember { cal.get(java.util.Calendar.DAY_OF_MONTH) }
+    val diffDays = profile.gymMembershipDueDay - currentDay
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth(0.94f)
                 .border(1.5.dp, Brush.horizontalGradient(listOf(NeonRed, NeonOrange)), RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
                 .testTag("gym_payment_dialog"),
@@ -86,13 +90,13 @@ fun GymPaymentReminderDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header Icon with Neon Red Glow
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(64.dp)
                         .background(NeonRedGlow, CircleShape)
                         .border(1.5.dp, NeonRed, CircleShape),
                     contentAlignment = Alignment.Center
@@ -101,14 +105,14 @@ fun GymPaymentReminderDialog(
                         imageVector = Icons.Default.Payments,
                         contentDescription = "Pagamento",
                         tint = NeonRed,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Mensalidade da Academia",
+                    text = "Aviso de Mensalidade",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Black,
                         color = TextWhitePrimary,
@@ -117,12 +121,70 @@ fun GymPaymentReminderDialog(
                     textAlign = TextAlign.Center
                 )
 
+                val dueStatusText = when {
+                    diffDays > 1 -> "Faltam $diffDays dias para o vencimento da sua matrícula (Dia ${profile.gymMembershipDueDay})"
+                    diffDays == 1 -> "Sua matrícula vence amanhã (Dia ${profile.gymMembershipDueDay})!"
+                    diffDays == 0 -> "Sua matrícula vence HOJE (Dia ${profile.gymMembershipDueDay})!"
+                    else -> "Sua matrícula está pendente desde o dia ${profile.gymMembershipDueDay}!"
+                }
+
                 Text(
-                    text = "Lembrete para manter sua matrícula ativa sem interrupções!",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary),
+                    text = dueStatusText,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (diffDays <= 0) NeonRed else NeonOrange,
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 18.dp)
+                    modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
                 )
+
+                // CARD MOTIVACIONAL DE TREINO: NÃO DEIXE DE IR MALHAR NA ACADEMIA
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.2.dp, NeonOrange.copy(alpha = 0.6f), RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = NeonOrange.copy(alpha = 0.12f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(NeonOrange),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FitnessCenter,
+                                contentDescription = "Treino",
+                                tint = PureBlack,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Não Deixe de Ir Malhar!",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = TextWhitePrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Mantenha o foco e a constância. Seu treino na ${profile.gymName} é prioridade para sua saúde!",
+                                fontSize = 12.sp,
+                                color = TextWhiteSecondary,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Info Card
                 Card(
@@ -131,7 +193,7 @@ fun GymPaymentReminderDialog(
                         .border(1.dp, BlackBorder, RoundedCornerShape(16.dp)),
                     colors = CardDefaults.cardColors(containerColor = BlackSurfaceCard)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -142,24 +204,24 @@ fun GymPaymentReminderDialog(
                                     imageVector = Icons.Default.FitnessCenter,
                                     contentDescription = null,
                                     tint = NeonOrange,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Academia:",
-                                    style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                                    style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
                                 )
                             }
                             Text(
                                 text = profile.gymName.ifBlank { "Minha Academia" },
-                                style = MaterialTheme.typography.bodyMedium.copy(
+                                style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextWhitePrimary
                                 )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -167,19 +229,19 @@ fun GymPaymentReminderDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Valor Mensal:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                                text = "Valor da Matrícula:",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
                             )
                             Text(
                                 text = "R$ ${profile.gymMembershipFee}",
-                                style = MaterialTheme.typography.titleMedium.copy(
+                                style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Black,
                                     color = NeonOrange
                                 )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -188,18 +250,18 @@ fun GymPaymentReminderDialog(
                         ) {
                             Text(
                                 text = "Dia de Vencimento:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
                             )
                             Text(
                                 text = "Todo dia ${profile.gymMembershipDueDay}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
+                                style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextWhitePrimary
                                 )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")) }
                         val lastDateStr = remember(profile.lastPaymentDateMillis) {
@@ -213,92 +275,68 @@ fun GymPaymentReminderDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Último Pagamento Anterior:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                                text = "Último Pagamento:",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
                             )
                             Text(
                                 text = lastDateStr,
-                                style = MaterialTheme.typography.bodyMedium.copy(
+                                style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = NeonOrange
                                 )
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Status Atual:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (profile.gymMembershipStatus == "Em dia") NeonGreen.copy(alpha = 0.2f)
-                                        else NeonRed.copy(alpha = 0.25f)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = profile.gymMembershipStatus,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (profile.gymMembershipStatus == "Em dia") NeonGreen else NeonRed
-                                    )
-                                )
-                            }
-                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Actions
+                // Actions: Confirmação solicitada pelo usuário
                 Button(
                     onClick = onConfirmPayment,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(52.dp)
                         .testTag("confirm_payment_button"),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = TextWhitePrimary,
+                        tint = PureBlack,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Confirmar Pagamento Realizado",
+                        text = "Já Efetuei a Mensalidade (Confirmar)",
                         style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextWhitePrimary
+                            fontWeight = FontWeight.Black,
+                            color = PureBlack
                         )
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Toque acima para confirmar o pagamento e pausar os avisos diários deste mês.",
+                    fontSize = 11.sp,
+                    color = TextWhiteMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 8.dp)
+                )
 
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(44.dp)
                         .testTag("dismiss_payment_button"),
                     shape = RoundedCornerShape(14.dp),
                     border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(BlackBorder, BlackBorder)))
                 ) {
                     Text(
-                        text = "Lembrar Mais Tarde",
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        text = "Lembrar Mais Tarde (Amanhã)",
+                        style = MaterialTheme.typography.bodySmall.copy(
                             color = TextWhiteSecondary,
                             fontWeight = FontWeight.Medium
                         )

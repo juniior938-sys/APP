@@ -24,7 +24,9 @@ import com.example.data.repository.FitnessRepository
 import com.example.data.repository.GeminiChatRepository
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
+import com.example.util.NotificationHelper
 import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -322,21 +324,59 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
 
         // Conforme configuração do perfil: só dispara se o botão estiver ATIVADO!
         if (!prof.gymMembershipReminderEnabled) return
-        // Dispara apenas uma vez por sessão como lembrete
-        if (hasShownAutomaticMembershipThisSession) return
 
         val calendar = java.util.Calendar.getInstance()
-        val currentDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        val year = calendar.get(java.util.Calendar.YEAR)
+        val month = calendar.get(java.util.Calendar.MONTH) + 1
+        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
 
-        val isStatusAlert = prof.gymMembershipStatus == "Vence em breve" || prof.gymMembershipStatus == "Pendente"
-        val diff = prof.gymMembershipDueDay - currentDay
-        val isDueDayNear = diff in -5..3
+        val todayDateString = String.format(Locale.US, "%04d-%02d-%02d", year, month, day)
+        val currentBillingCycle = String.format(Locale.US, "%04d-%02d", year, month)
 
-        if (isStatusAlert || isDueDayNear) {
-            hasShownAutomaticMembershipThisSession = true
+        // Se o atleta já clicou no botão confirmando que efetuou a mensalidade deste mês, não exibe mais até o próximo mês
+        if (prof.lastPaidBillingCycle == currentBillingCycle && prof.gymMembershipStatus == "Em dia") {
+            return
+        }
+
+        // Dias até o vencimento da matrícula
+        val maxDays = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+        val dueDay = prof.gymMembershipDueDay.coerceIn(1, maxDays)
+        val diffDays = dueDay - day
+
+        // Ativa a partir de 3 dias antes do vencimento (diffDays <= 3) e continua ativo diariamente até confirmarem o pagamento
+        val isReminderWindowActive = diffDays <= 3 || prof.gymMembershipStatus == "Vence em breve" || prof.gymMembershipStatus == "Pendente"
+
+        if (isReminderWindowActive) {
+            // 1. Abre o popup interno na interface do APK
             _showMembershipPopup.value = true
-            // Alerta automático visual sem som sonoro
             vibrateDevice(200)
+
+            // 2. Dispara popup externo do APK (notificação de alta prioridade do sistema Android) UMA VEZ AO DIA
+            if (prof.lastMembershipPromptDate != todayDateString) {
+                val dueText = when {
+                    diffDays > 1 -> "Sua matrícula na ${prof.gymName} vence em $diffDays dias (dia $dueDay)!"
+                    diffDays == 1 -> "Sua matrícula na ${prof.gymName} vence amanhã (dia $dueDay)!"
+                    diffDays == 0 -> "Sua matrícula na ${prof.gymName} vence HOJE (dia $dueDay)!"
+                    else -> "Sua matrícula na ${prof.gymName} está pendente desde o dia $dueDay!"
+                }
+                val workoutMotivationalText = "$dueText Não deixe de ir malhar hoje na academia! Mantenha a constância e o foco nos treinos."
+
+                NotificationHelper.showMembershipExternalNotification(
+                    context = getApplication<Application>().applicationContext,
+                    title = "Aviso de Mensalidade & Foco no Treino! 💪",
+                    message = workoutMotivationalText,
+                    gymName = prof.gymName
+                )
+
+                // Salva que hoje já foi disparado o popup externo
+                viewModelScope.launch {
+                    val updated = prof.copy(
+                        lastMembershipPromptDate = todayDateString,
+                        gymMembershipStatus = if (diffDays < 0) "Pendente" else if (diffDays in 0..3) "Vence em breve" else prof.gymMembershipStatus
+                    )
+                    repository.saveUserProfile(updated)
+                }
+            }
         }
     }
 
@@ -405,14 +445,19 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
     fun markGymMembershipPaid() {
         viewModelScope.launch {
             val current = userProfile.value
+            val now = java.util.Calendar.getInstance()
+            val currentCycle = String.format(Locale.US, "%04d-%02d", now.get(java.util.Calendar.YEAR), now.get(java.util.Calendar.MONTH) + 1)
             val updated = current.copy(
                 gymMembershipStatus = "Em dia",
                 isMembershipBlocked = false,
-                lastPaymentDateMillis = System.currentTimeMillis()
+                lastPaymentDateMillis = System.currentTimeMillis(),
+                lastPaidBillingCycle = currentCycle
             )
             repository.saveUserProfile(updated)
             _showMembershipPopup.value = false
             _isMembershipBlocked.value = false
+            NotificationHelper.cancelMembershipNotification(getApplication<Application>().applicationContext)
+            vibrateDevice(100)
         }
     }
 
