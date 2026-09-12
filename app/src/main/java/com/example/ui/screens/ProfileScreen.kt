@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +32,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FlashOn
@@ -39,6 +45,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Shield
@@ -70,11 +77,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.model.UserProfile
 import com.example.ui.components.DigitalDueDatePickerDialog
 import com.example.ui.theme.BlackBorder
@@ -103,6 +115,8 @@ fun ProfileScreen(
     userProfile: UserProfile,
     isSaving: Boolean,
     onSaveProfile: (UserProfile) -> Unit,
+    onUpdateProfilePhoto: (Uri) -> Unit = {},
+    onRemoveProfilePhoto: () -> Unit = {},
     onTriggerMembershipPopup: () -> Unit = {},
     onTriggerAlarmPopup: () -> Unit = {},
     onTriggerWaterPopup: () -> Unit = {},
@@ -110,6 +124,14 @@ fun ProfileScreen(
     onReplayEntranceVideo: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            onUpdateProfilePhoto(uri)
+        }
+    }
+
     var name by remember(userProfile) { mutableStateOf(userProfile.name) }
     var ageStr by remember(userProfile) { mutableStateOf(userProfile.age.toString()) }
     var gender by remember(userProfile) { mutableStateOf(userProfile.gender) }
@@ -174,7 +196,28 @@ fun ProfileScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Cabeçalho com Botão Salvar Perfil no Topo à Direita
+            val context = LocalContext.current
+            val onOpenWhatsApp = {
+                val phoneNumber = "5571981341942"
+                val text = "Olá! Sou aluno(a) da Ampla Fitness."
+                val encodedText = Uri.encode(text)
+                try {
+                    val waIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("whatsapp://send?phone=$phoneNumber&text=$encodedText")
+                        setPackage("com.whatsapp")
+                    }
+                    context.startActivity(waIntent)
+                } catch (_: Exception) {
+                    try {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=$phoneNumber&text=$encodedText"))
+                        context.startActivity(browserIntent)
+                    } catch (_: Exception) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$phoneNumber")))
+                    }
+                }
+            }
+
+            // Cabeçalho com Ícone do WhatsApp no perfil alto clicável e Botão Salvar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -210,65 +253,251 @@ fun ProfileScreen(
                             )
                         )
                         Text(
-                            text = "Configurações & Alarmes",
+                            text = "Configurações & Suporte",
                             style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
                         )
                     }
                 }
 
-                // Botão de salvar perfil fixado no Topo à Direita
-                Button(
-                    onClick = {
-                        val updated = userProfile.copy(
-                            name = name.ifBlank { "Atleta" },
-                            age = ageStr.toIntOrNull() ?: userProfile.age,
-                            weightKg = weightNum,
-                            heightCm = heightNum,
-                            gender = gender,
-                            fitnessLevel = fitnessLevel,
-                            workoutLocation = workoutLocation,
-                            fitnessGoal = fitnessGoal,
-                            gymName = gymName,
-                            gymMembershipFee = gymFee,
-                            gymMembershipDueDay = gymDueDay,
-                            gymMembershipStatus = gymStatus,
-                            gymMembershipReminderEnabled = gymReminderEnabled,
-                            gymAlarmHour = gymHour,
-                            gymAlarmMinute = gymMinute,
-                            gymAlarmDays = gymDays,
-                            gymAlarmEnabled = gymAlarmEnabled,
-                            waterReminderIntervalMinutes = waterInterval,
-                            waterReminderEnabled = waterEnabled,
-                            adminPin = adminPin.filter { it.isDigit() }.take(6).ifBlank { "123456" }
-                        )
-                        onSaveProfile(updated)
-                    },
-                    modifier = Modifier.testTag("top_save_profile_button"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    enabled = !isSaving
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = TextWhitePrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
+                    // Ícone do WhatsApp no perfil alto clicável direcionando para o app (71 98134-1942)
+                    Button(
+                        onClick = onOpenWhatsApp,
+                        modifier = Modifier.testTag("top_whatsapp_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF25D366),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Salvar Perfil",
-                            tint = TextWhitePrimary,
+                            painter = painterResource(id = R.drawable.ic_whatsapp),
+                            contentDescription = "WhatsApp 71 98134-1942",
+                            tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "Salvar",
+                            text = "WhatsApp",
                             fontWeight = FontWeight.Bold,
-                            color = TextWhitePrimary,
-                            fontSize = 14.sp
+                            color = Color.White,
+                            fontSize = 13.sp
                         )
+                    }
+
+                    // Botão de salvar perfil fixado no Topo à Direita
+                    Button(
+                        onClick = {
+                            val updated = userProfile.copy(
+                                name = name.ifBlank { "Atleta" },
+                                age = ageStr.toIntOrNull() ?: userProfile.age,
+                                weightKg = weightNum,
+                                heightCm = heightNum,
+                                gender = gender,
+                                fitnessLevel = fitnessLevel,
+                                workoutLocation = workoutLocation,
+                                fitnessGoal = fitnessGoal,
+                                gymName = gymName,
+                                gymMembershipFee = gymFee,
+                                gymMembershipDueDay = gymDueDay,
+                                gymMembershipStatus = gymStatus,
+                                gymMembershipReminderEnabled = gymReminderEnabled,
+                                gymAlarmHour = gymHour,
+                                gymAlarmMinute = gymMinute,
+                                gymAlarmDays = gymDays,
+                                gymAlarmEnabled = gymAlarmEnabled,
+                                waterReminderIntervalMinutes = waterInterval,
+                                waterReminderEnabled = waterEnabled,
+                                adminPin = adminPin.filter { it.isDigit() }.take(6).ifBlank { "123456" }
+                            )
+                            onSaveProfile(updated)
+                        },
+                        modifier = Modifier.testTag("top_save_profile_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonGreen),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = TextWhitePrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Salvar Perfil",
+                                tint = TextWhitePrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Salvar",
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhitePrimary,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // FOTO DE PERFIL DO ATLETA (Opção de carregar foto solicitada pelo usuário)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.5.dp, NeonRed.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                    .testTag("profile_picture_card"),
+                colors = CardDefaults.cardColors(containerColor = BlackSurfaceCard)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, NeonRed, CircleShape)
+                            .clickable {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                            .testTag("profile_photo_avatar_container"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!userProfile.profilePictureUri.isNullOrBlank()) {
+                            AsyncImage(
+                                model = userProfile.profilePictureUri,
+                                contentDescription = "Foto do perfil",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(NeonRedGlow),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = NeonRed,
+                                    modifier = Modifier.size(42.dp)
+                                )
+                            }
+                        }
+
+                        // Badge de câmera no canto inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(NeonRed)
+                                .border(1.5.dp, PureBlack, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Carregar foto",
+                                tint = TextWhitePrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Foto do Perfil",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhitePrimary
+                            )
+                        )
+                        Text(
+                            text = if (!userProfile.profilePictureUri.isNullOrBlank())
+                                "Foto ativa no perfil e na tela de início"
+                            else
+                                "Carregue sua foto para personalizar o app",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = TextWhiteMuted,
+                                fontSize = 12.sp
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                modifier = Modifier.testTag("upload_profile_photo_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 12.dp,
+                                    vertical = 6.dp
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = null,
+                                    tint = TextWhitePrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (!userProfile.profilePictureUri.isNullOrBlank()) "Trocar Foto" else "Carregar Foto",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = TextWhitePrimary
+                                )
+                            }
+
+                            if (!userProfile.profilePictureUri.isNullOrBlank()) {
+                                OutlinedButton(
+                                    onClick = onRemoveProfilePhoto,
+                                    modifier = Modifier.testTag("remove_profile_photo_button"),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, TextWhiteMuted),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                        horizontal = 10.dp,
+                                        vertical = 6.dp
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Remover foto",
+                                        tint = TextWhiteMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Remover",
+                                        fontSize = 12.sp,
+                                        color = TextWhiteMuted
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -578,7 +807,7 @@ fun ProfileScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Alertas Automáticos Ativos",
+                                    text = "Alertas Visuais Automáticos (Silencioso)",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = TextWhitePrimary
@@ -586,9 +815,9 @@ fun ProfileScreen(
                                 )
                                 Text(
                                     text = if (gymReminderEnabled)
-                                        "O popup de aviso e o bloqueio são acionados automaticamente pelo status e no vencimento (todo dia $gymDueDay)."
+                                        "O aviso de vencimento é exibido na tela no dia $gymDueDay de cada mês de forma visual e silenciosa (sem som)."
                                     else
-                                        "Lembretes desativados. Ative a chave acima para receber os avisos automáticos.",
+                                        "Lembretes desativados. Ative a chave acima para receber os avisos na tela.",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = TextWhiteSecondary,
                                         fontSize = 11.sp
@@ -859,45 +1088,169 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = gymDays,
-                        onValueChange = { gymDays = it },
-                        label = { Text("Dias de Treino", color = TextWhiteSecondary) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextWhitePrimary,
-                            unfocusedTextColor = TextWhitePrimary,
-                            focusedBorderColor = NeonOrange,
-                            unfocusedBorderColor = BlackBorder
-                        )
-                    )
-
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Button(
-                        onClick = onTriggerAlarmPopup,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("test_alarm_popup_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonOrange)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = null,
-                            tint = TextWhitePrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Disparar Alarme Agora (Testar Popup)",
+                    Text(
+                        text = "Dias de Treino (Todos os Dias da Semana)",
+                        style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextWhitePrimary
                         )
+                    )
+                    Text(
+                        text = "Selecione os dias da semana programados para o seu treino:",
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val allWeekDays = listOf(
+                        "Dom" to "Domingo",
+                        "Seg" to "Segunda",
+                        "Ter" to "Terça",
+                        "Qua" to "Quarta",
+                        "Qui" to "Quinta",
+                        "Sex" to "Sexta",
+                        "Sáb" to "Sábado"
+                    )
+
+                    // Presets rápidos de seleção
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val isAllSelected = allWeekDays.all { (abbr, _) ->
+                            gymDays.contains(abbr, ignoreCase = true) || gymDays.contains("Todos", ignoreCase = true)
+                        }
+                        FilterChip(
+                            selected = isAllSelected,
+                            onClick = {
+                                gymDays = "Dom, Seg, Ter, Qua, Qui, Sex, Sáb"
+                            },
+                            label = { Text("Todos os Dias (7 dias)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonOrange,
+                                selectedLabelColor = TextWhitePrimary,
+                                containerColor = BlackSurfaceElevated,
+                                labelColor = TextWhiteSecondary
+                            )
+                        )
+                        FilterChip(
+                            selected = gymDays == "Seg, Ter, Qua, Qui, Sex",
+                            onClick = {
+                                gymDays = "Seg, Ter, Qua, Qui, Sex"
+                            },
+                            label = { Text("Seg a Sex (5d)", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonOrange,
+                                selectedLabelColor = TextWhitePrimary,
+                                containerColor = BlackSurfaceElevated,
+                                labelColor = TextWhiteSecondary
+                            )
+                        )
+                        FilterChip(
+                            selected = gymDays == "Seg, Ter, Qua, Qui, Sex, Sáb",
+                            onClick = {
+                                gymDays = "Seg, Ter, Qua, Qui, Sex, Sáb"
+                            },
+                            label = { Text("Seg a Sáb (6d)", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonOrange,
+                                selectedLabelColor = TextWhitePrimary,
+                                containerColor = BlackSurfaceElevated,
+                                labelColor = TextWhiteSecondary
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Linha com todos os 7 dias da semana (Dom, Seg, Ter, Qua, Qui, Sex, Sáb)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        allWeekDays.forEach { (abbr, _) ->
+                            val isSelected = gymDays.contains(abbr, ignoreCase = true) || gymDays.contains("Todos", ignoreCase = true)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) NeonOrange else BlackSurfaceElevated,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isSelected) NeonOrange else BlackBorder
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        val currentList = allWeekDays
+                                            .map { it.first }
+                                            .filter {
+                                                gymDays.contains(it, ignoreCase = true) || gymDays.contains("Todos", ignoreCase = true)
+                                            }
+                                            .toMutableList()
+
+                                        if (isSelected) {
+                                            if (currentList.size > 1) {
+                                                currentList.remove(abbr)
+                                            }
+                                        } else {
+                                            if (!currentList.contains(abbr)) {
+                                                currentList.add(abbr)
+                                            }
+                                        }
+                                        val ordered = allWeekDays
+                                            .map { it.first }
+                                            .filter { currentList.contains(it) }
+                                        gymDays = ordered.joinToString(", ")
+                                    }
+                                    .testTag("week_day_chip_$abbr")
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = abbr,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isSelected) TextWhitePrimary else TextWhiteSecondary
+                                    )
+                                    Text(
+                                        text = if (abbr == "Dom" || abbr == "Sáb") "FDS" else "Treino",
+                                        fontSize = 8.sp,
+                                        color = if (isSelected) TextWhitePrimary.copy(alpha = 0.8f) else TextWhiteMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = BlackSurfaceElevated,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = NeonOrange,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Dias ativos: $gymDays",
+                                fontSize = 12.sp,
+                                color = TextWhitePrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -987,31 +1340,6 @@ fun ProfileScreen(
                                 )
                             )
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = onTriggerWaterPopup,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("test_water_popup_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonBlue)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalDrink,
-                            contentDescription = null,
-                            tint = PureBlack,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Testar Popup de Hidratação",
-                            fontWeight = FontWeight.Bold,
-                            color = PureBlack
-                        )
                     }
                 }
             }

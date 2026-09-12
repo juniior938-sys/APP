@@ -325,6 +325,18 @@ fun FitCoachApp(
                                 }
                                 currentTab = FitCoachTab.DASHBOARD
                             },
+                            onUpdateProfilePhoto = { uri ->
+                                viewModel.updateProfilePicture(uri)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Foto de perfil atualizada com sucesso!")
+                                }
+                            },
+                            onRemoveProfilePhoto = {
+                                viewModel.removeProfilePicture()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Foto de perfil removida.")
+                                }
+                            },
                             onTriggerMembershipPopup = { viewModel.triggerMembershipReminderNow() },
                             onTriggerAlarmPopup = { viewModel.triggerGymAlarmNow() },
                             onTriggerWaterPopup = { viewModel.triggerWaterReminderNow() },

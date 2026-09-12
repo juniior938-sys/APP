@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
@@ -93,6 +94,7 @@ enum class RechartsMetricView {
 fun WeightBmiEvolutionRechartsCard(
     userProfile: UserProfile,
     weightLogs: List<WeightLogEntity> = emptyList(),
+    onLogWeightClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedMetric by remember { mutableStateOf(RechartsMetricView.BOTH) }
@@ -157,19 +159,54 @@ fun WeightBmiEvolutionRechartsCard(
                     }
                 }
 
-                // Badge Estilo Recharts
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = BlackSurfaceElevated,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = "Recharts",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonOrange,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
+                    if (onLogWeightClick != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = NeonOrangeGlow,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonOrange),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onLogWeightClick() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Registrar Peso",
+                                    tint = NeonOrange,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "+ Peso",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonOrange
+                                )
+                            }
+                        }
+                    }
+
+                    // Badge Estilo Recharts
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = BlackSurfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder)
+                    ) {
+                        Text(
+                            text = "Recharts",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonOrange,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 

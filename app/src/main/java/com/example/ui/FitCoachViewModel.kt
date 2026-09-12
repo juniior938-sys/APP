@@ -3,8 +3,10 @@ package com.example.ui
 import android.app.Application
 import android.content.Context
 import android.media.AudioManager
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.media.ToneGenerator
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -22,6 +24,8 @@ import com.example.data.repository.FitnessRepository
 import com.example.data.repository.GeminiChatRepository
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -137,8 +141,14 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
     private val _isChatLoading = MutableStateFlow(false)
     val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
 
+    private var activeRingtone: Ringtone? = null
+    private var stopSoundJob: Job? = null
+    private var hasShownAutomaticMembershipThisSession = false
+    private var lastAlarmSlotKey: String = ""
+
     init {
         loadInitialData()
+        startGymAlarmClockObserver()
     }
 
     private fun loadInitialData() {
@@ -154,6 +164,42 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private fun startGymAlarmClockObserver() {
+        viewModelScope.launch {
+            while (true) {
+                delay(25_000L) // Checa o relógio a cada 25 segundos
+                val prof = userProfile.value
+                if (prof.gymAlarmEnabled) {
+                    val cal = java.util.Calendar.getInstance()
+                    val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                    val currentMinute = cal.get(java.util.Calendar.MINUTE)
+                    val dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK)
+                    val dayAbbr = when (dayOfWeek) {
+                        java.util.Calendar.SUNDAY -> "Dom"
+                        java.util.Calendar.MONDAY -> "Seg"
+                        java.util.Calendar.TUESDAY -> "Ter"
+                        java.util.Calendar.WEDNESDAY -> "Qua"
+                        java.util.Calendar.THURSDAY -> "Qui"
+                        java.util.Calendar.FRIDAY -> "Sex"
+                        java.util.Calendar.SATURDAY -> "Sáb"
+                        else -> ""
+                    }
+
+                    val currentSlotKey = "${cal.get(java.util.Calendar.YEAR)}-${cal.get(java.util.Calendar.DAY_OF_YEAR)}-$currentHour-$currentMinute"
+                    if (currentHour == prof.gymAlarmHour && currentMinute == prof.gymAlarmMinute && currentSlotKey != lastAlarmSlotKey) {
+                        val daysActive = prof.gymAlarmDays
+                        if (daysActive.contains(dayAbbr, ignoreCase = true) || daysActive.contains("Todos", ignoreCase = true)) {
+                            lastAlarmSlotKey = currentSlotKey
+                            _showGymAlarmPopup.value = true
+                            // Alerta automático visual sem som sonoro
+                            vibrateDevice(200)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun updateProfile(newProfile: UserProfile, regeneratePlanNow: Boolean = true) {
         viewModelScope.launch {
             _isGeneratingPlan.value = true
@@ -163,7 +209,6 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
             } else {
                 _isMembershipBlocked.value = false
             }
-            checkAutomaticMembershipReminder(newProfile)
             if (regeneratePlanNow) {
                 delay(400) // Smooth UX feedback
                 val updatedPlan = repository.regeneratePlan(newProfile)
@@ -203,50 +248,59 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
                     _workoutElapsedSeconds.value % intervalSec == 0
                 ) {
                     _showWaterReminderPopup.value = true
-                    vibrateDevice()
+                    vibrateDevice(150)
                 }
             }
         }
     }
 
     fun drinkWater(ml: Int = 250) {
+        stopAlarmSound()
         _waterConsumedMl.value = _waterConsumedMl.value + ml
         _showWaterReminderPopup.value = false
-        vibrateDevice()
+        vibrateDevice(150)
     }
 
     fun dismissWaterReminderPopup() {
+        stopAlarmSound()
         _showWaterReminderPopup.value = false
     }
 
-    fun triggerWaterReminderManual() {
+    fun triggerWaterReminderManual(forceTest: Boolean = false) {
+        if (!forceTest && !userProfile.value.waterReminderEnabled) return
         _showWaterReminderPopup.value = true
-        vibrateDevice()
+        vibrateDevice(150)
     }
 
-    fun triggerWaterReminderNow() {
-        triggerWaterReminderManual()
+    fun triggerWaterReminderNow(forceTest: Boolean = false) {
+        triggerWaterReminderManual(forceTest)
     }
 
-    fun triggerGymAlarm() {
+    fun triggerGymAlarm(forceTest: Boolean = false) {
+        if (!forceTest && !userProfile.value.gymAlarmEnabled) return
         _showGymAlarmPopup.value = true
-        playAlarmSound()
+        vibrateDevice(200)
     }
 
-    fun triggerGymAlarmNow() {
-        triggerGymAlarm()
+    fun triggerGymAlarmNow(forceTest: Boolean = false) {
+        triggerGymAlarm(forceTest)
     }
 
     fun dismissGymAlarm() {
+        stopAlarmSound()
         _showGymAlarmPopup.value = false
     }
 
     fun snoozeGymAlarm(minutes: Int = 10) {
+        stopAlarmSound()
         _showGymAlarmPopup.value = false
+        if (!userProfile.value.gymAlarmEnabled) return
         viewModelScope.launch {
             delay(minutes * 60 * 1000L)
-            _showGymAlarmPopup.value = true
-            playAlarmSound()
+            if (userProfile.value.gymAlarmEnabled) {
+                _showGymAlarmPopup.value = true
+                vibrateDevice(150)
+            }
         }
     }
 
@@ -266,7 +320,10 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
+        // Conforme configuração do perfil: só dispara se o botão estiver ATIVADO!
         if (!prof.gymMembershipReminderEnabled) return
+        // Dispara apenas uma vez por sessão como lembrete
+        if (hasShownAutomaticMembershipThisSession) return
 
         val calendar = java.util.Calendar.getInstance()
         val currentDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
@@ -276,21 +333,25 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         val isDueDayNear = diff in -5..3
 
         if (isStatusAlert || isDueDayNear) {
+            hasShownAutomaticMembershipThisSession = true
             _showMembershipPopup.value = true
-            playAlarmSound()
+            // Alerta automático visual sem som sonoro
+            vibrateDevice(200)
         }
     }
 
-    fun triggerMembershipPopup() {
+    fun triggerMembershipPopup(forceTest: Boolean = false) {
+        if (!forceTest && !userProfile.value.gymMembershipReminderEnabled) return
         _showMembershipPopup.value = true
-        playAlarmSound()
+        vibrateDevice(200)
     }
 
-    fun triggerMembershipReminderNow() {
-        triggerMembershipPopup()
+    fun triggerMembershipReminderNow(forceTest: Boolean = false) {
+        triggerMembershipPopup(forceTest)
     }
 
     fun dismissMembershipPopup() {
+        stopAlarmSound()
         _showMembershipPopup.value = false
     }
 
@@ -492,20 +553,77 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         vibrateDevice(durationMs = 150)
     }
 
-    fun playAlarmSound() {
+    fun stopAlarmSound() {
         try {
-            val context = getApplication<Application>()
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(context, uri)
-            ringtone?.play()
-        } catch (_: Exception) {
+            stopSoundJob?.cancel()
+            stopSoundJob = null
+            activeRingtone?.stop()
+            activeRingtone = null
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * O som do alarme só deve alarmar UMA VEZ como lembrete sonoro (não fica disparando direto).
+     * Para automaticamente após 1.5s ou imediatamente quando qualquer popup é dispensado/fechado.
+     */
+    fun playAlarmSound() {
+        stopAlarmSound()
+        viewModelScope.launch(Dispatchers.Main) {
             try {
-                val toneGen = ToneGenerator(AudioManager.STREAM_ALARM, 90)
-                toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 500)
-            } catch (_: Exception) {}
+                val context = getApplication<Application>()
+                // Usa som de notificação/lembrete amigável de toque único
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                val ringtone = RingtoneManager.getRingtone(context, uri)
+                activeRingtone = ringtone
+                ringtone?.play()
+
+                // Alarma só uma vez como lembrete - cancela/para após 1.5s
+                stopSoundJob = launch {
+                    delay(1500)
+                    stopAlarmSound()
+                }
+            } catch (_: Exception) {
+                try {
+                    val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+                    toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 300)
+                } catch (_: Exception) {}
+            }
         }
-        vibrateDevice(durationMs = 600)
+        vibrateDevice(durationMs = 250)
+    }
+
+    fun updateProfilePicture(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val context = getApplication<Application>()
+                val file = File(context.filesDir, "profile_avatar_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                val localUri = Uri.fromFile(file).toString()
+                val current = userProfile.value
+                val updated = current.copy(profilePictureUri = localUri)
+                repository.saveUserProfile(updated)
+                vibrateDevice(100)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun removeProfilePicture() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val current = userProfile.value
+                val updated = current.copy(profilePictureUri = null)
+                repository.saveUserProfile(updated)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun vibrateDevice(durationMs: Long = 500) {

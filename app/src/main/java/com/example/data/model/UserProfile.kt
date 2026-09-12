@@ -28,17 +28,20 @@ data class UserProfile(
     val isMembershipBlocked: Boolean = false,
     val adminPin: String = "123456", // Senha de 6 dígitos do Administrador
     val isFirstSetupDone: Boolean = true, // Ativa bloqueio somente após o primeiro cadastro
-    val adminContactPhone: String = "(11) 98765-4321",
+    val adminContactPhone: String = "(71) 98134-1942",
 
     // Lembrete de Horário de Academia & Alarmes
     val gymAlarmHour: Int = 18,
     val gymAlarmMinute: Int = 30,
-    val gymAlarmDays: String = "Seg, Ter, Qua, Qui, Sex",
+    val gymAlarmDays: String = "Dom, Seg, Ter, Qua, Qui, Sex, Sáb",
     val gymAlarmEnabled: Boolean = true,
 
     // Lembrete de Beber Água durante os Treinos
     val waterReminderIntervalMinutes: Int = 10,
     val waterReminderEnabled: Boolean = true,
+
+    // Foto do Perfil do Atleta
+    val profilePictureUri: String? = null,
 
     val updatedAt: Long = System.currentTimeMillis()
 ) {
