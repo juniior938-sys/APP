@@ -271,6 +271,8 @@ fun FitCoachApp(
                             weeklyPlan = weeklyPlan,
                             chatMessages = chatMessages,
                             isChatLoading = isChatLoading,
+                            workoutHistory = workoutHistory,
+                            weightLogs = weightLogs,
                             onSendMessage = { text -> viewModel.sendChatMessage(text) },
                             onClearChat = { viewModel.clearChatHistory() },
                             onStartWorkout = { day -> viewModel.startWorkoutSession(day) },
@@ -278,6 +280,12 @@ fun FitCoachApp(
                                 viewModel.logWeight(weight)
                                 scope.launch {
                                     snackbarHostState.showSnackbar("Peso registrado: $weight kg. IMC recalculado!")
+                                }
+                            },
+                            onLogQuickActivity = { title, duration, calories, category ->
+                                viewModel.logQuickActivity(title, duration, calories, category)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("🔥 $title registrado! +$calories kcal queimadas.")
                                 }
                             },
                             onNavigateToPlan = { currentTab = FitCoachTab.PLAN },

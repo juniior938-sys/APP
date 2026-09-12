@@ -73,74 +73,74 @@ fun StreakCard(
             // Streak Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(NeonOrangeGlow),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalFireDepartment,
-                            contentDescription = "Fogo Dias Seguidos",
-                            tint = NeonOrange,
-                            modifier = Modifier.size(28.dp)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(NeonOrangeGlow),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = "Fogo Dias Seguidos",
+                        tint = NeonOrange,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${streakStats.currentStreakDays}",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            color = NeonOrange
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (streakStats.currentStreakDays == 1) "Dia Seguido" else "Dias Seguidos",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhitePrimary
+                            )
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "${streakStats.currentStreakDays}",
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Black,
-                                color = NeonOrange
+                    Text(
+                        text = if (streakStats.currentStreakDays > 0)
+                            "Foco total! Mantenha a chama acesa."
+                        else "Treine hoje para iniciar seus dias seguidos!",
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Recorde movido para logo abaixo do contador e sub-texto
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = NeonRed.copy(alpha = 0.18f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Melhor Sequência",
+                                tint = NeonRed,
+                                modifier = Modifier.size(13.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (streakStats.currentStreakDays == 1) "Dia Seguido" else "Dias Seguidos",
-                                style = MaterialTheme.typography.titleMedium.copy(
+                                text = "Recorde: ${streakStats.longestStreakDays}d",
+                                style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = TextWhitePrimary
+                                    color = NeonRed
                                 )
                             )
                         }
-                        Text(
-                            text = if (streakStats.currentStreakDays > 0)
-                                "Foco total! Mantenha a chama acesa."
-                            else "Treine hoje para iniciar seus dias seguidos!",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = NeonRed.copy(alpha = 0.18f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.4f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = "Melhor Sequência",
-                            tint = NeonRed,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Recorde: ${streakStats.longestStreakDays}d",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = NeonRed
-                            )
-                        )
                     }
                 }
             }

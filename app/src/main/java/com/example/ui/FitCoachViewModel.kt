@@ -2,6 +2,9 @@ package com.example.ui
 
 import android.app.Application
 import android.content.Context
+import android.media.AudioManager
+import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -227,7 +230,7 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
 
     fun triggerGymAlarm() {
         _showGymAlarmPopup.value = true
-        vibrateDevice()
+        playAlarmSound()
     }
 
     fun triggerGymAlarmNow() {
@@ -243,7 +246,7 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             delay(minutes * 60 * 1000L)
             _showGymAlarmPopup.value = true
-            vibrateDevice()
+            playAlarmSound()
         }
     }
 
@@ -274,12 +277,13 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
 
         if (isStatusAlert || isDueDayNear) {
             _showMembershipPopup.value = true
+            playAlarmSound()
         }
     }
 
     fun triggerMembershipPopup() {
         _showMembershipPopup.value = true
-        vibrateDevice()
+        playAlarmSound()
     }
 
     fun triggerMembershipReminderNow() {
@@ -412,6 +416,11 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
             current[index] = item.copy(isCompleted = newState)
             _activeExercisesState.value = current
 
+            if (newState) {
+                // Toque sonoro de sucesso ao concluir tarefa de treino
+                playTaskCompletionSound()
+            }
+
             // If checked as completed and has rest time, auto-trigger rest timer
             if (newState && item.restSeconds > 0) {
                 startRestTimer(item.restSeconds)
@@ -432,7 +441,7 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
             }
             if (_restTimerSeconds.value == 0 && _isTimerRunning.value) {
                 _isTimerRunning.value = false
-                vibrateDevice()
+                playTaskCompletionSound()
             }
         }
     }
@@ -468,19 +477,50 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         _totalRestDuration.value = 0
     }
 
-    private fun vibrateDevice() {
+    fun playTaskCompletionSound() {
+        try {
+            val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+            toneGen.startTone(ToneGenerator.TONE_PROP_ACK, 200)
+        } catch (_: Exception) {
+            try {
+                val context = getApplication<Application>()
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val ringtone = RingtoneManager.getRingtone(context, uri)
+                ringtone?.play()
+            } catch (_: Exception) {}
+        }
+        vibrateDevice(durationMs = 150)
+    }
+
+    fun playAlarmSound() {
+        try {
+            val context = getApplication<Application>()
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val ringtone = RingtoneManager.getRingtone(context, uri)
+            ringtone?.play()
+        } catch (_: Exception) {
+            try {
+                val toneGen = ToneGenerator(AudioManager.STREAM_ALARM, 90)
+                toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 500)
+            } catch (_: Exception) {}
+        }
+        vibrateDevice(durationMs = 600)
+    }
+
+    private fun vibrateDevice(durationMs: Long = 500) {
         try {
             val context = getApplication<Application>()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
                 vibratorManager?.defaultVibrator?.vibrate(
-                    VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+                    VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE)
                 )
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                 @Suppress("DEPRECATION")
-                vibrator?.vibrate(500)
+                vibrator?.vibrate(durationMs)
             }
         } catch (_: Exception) {}
     }
@@ -523,6 +563,26 @@ class FitCoachViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val profile = repository.getUserProfile()
             repository.logWeight(weight, profile.heightCm)
+        }
+    }
+
+    fun logQuickActivity(
+        title: String,
+        durationMinutes: Int,
+        caloriesBurned: Int,
+        category: String = "Cardio"
+    ) {
+        viewModelScope.launch {
+            repository.logCompletedWorkout(
+                dayNumber = 0,
+                workoutTitle = title,
+                durationMinutes = durationMinutes,
+                completedExercisesCount = 1,
+                totalExercisesCount = 1,
+                notes = category,
+                customCalories = caloriesBurned
+            )
+            playTaskCompletionSound()
         }
     }
 

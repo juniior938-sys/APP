@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.Lock
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,6 +50,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -170,40 +174,102 @@ fun ProfileScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Cabeçalho
+            // Cabeçalho com Botão Salvar Perfil no Topo à Direita
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(NeonRedGlow, CircleShape)
-                        .border(1.5.dp, NeonRed, CircleShape),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Perfil",
-                        tint = NeonRed,
-                        modifier = Modifier.size(26.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(NeonRedGlow, CircleShape)
+                            .border(1.5.dp, NeonRed, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Perfil",
+                            tint = NeonRed,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = "Perfil do Atleta",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                color = TextWhitePrimary
+                            )
+                        )
+                        Text(
+                            text = "Configurações & Alarmes",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Text(
-                        text = "Perfil do Atleta & Configurações",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Black,
-                            color = TextWhitePrimary
+                // Botão de salvar perfil fixado no Topo à Direita
+                Button(
+                    onClick = {
+                        val updated = userProfile.copy(
+                            name = name.ifBlank { "Atleta" },
+                            age = ageStr.toIntOrNull() ?: userProfile.age,
+                            weightKg = weightNum,
+                            heightCm = heightNum,
+                            gender = gender,
+                            fitnessLevel = fitnessLevel,
+                            workoutLocation = workoutLocation,
+                            fitnessGoal = fitnessGoal,
+                            gymName = gymName,
+                            gymMembershipFee = gymFee,
+                            gymMembershipDueDay = gymDueDay,
+                            gymMembershipStatus = gymStatus,
+                            gymMembershipReminderEnabled = gymReminderEnabled,
+                            gymAlarmHour = gymHour,
+                            gymAlarmMinute = gymMinute,
+                            gymAlarmDays = gymDays,
+                            gymAlarmEnabled = gymAlarmEnabled,
+                            waterReminderIntervalMinutes = waterInterval,
+                            waterReminderEnabled = waterEnabled,
+                            adminPin = adminPin.filter { it.isDigit() }.take(6).ifBlank { "123456" }
                         )
-                    )
-                    Text(
-                        text = "Personalize seus dados, alarmes e mensalidade da academia",
-                        style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
-                    )
+                        onSaveProfile(updated)
+                    },
+                    modifier = Modifier.testTag("top_save_profile_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonGreen),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    enabled = !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = TextWhitePrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Salvar Perfil",
+                            tint = TextWhitePrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Salvar",
+                            fontWeight = FontWeight.Bold,
+                            color = TextWhitePrimary,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
 
@@ -300,70 +366,102 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Data de Vencimento com Calendário Digital Editável
+                    // Data de Vencimento com Campo Numérico Direto e Botão de Calendário
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = BlackSurfaceElevated,
                         border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Vencimento da Mensalidade:",
-                                    style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
-                                )
-                                Text(
-                                    text = "Todo dia $gymDueDay de cada mês",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        color = NeonRed,
-                                        fontWeight = FontWeight.Bold
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "Dia de Vencimento da Mensalidade (1 a 31):",
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = if (gymDueDay > 0) gymDueDay.toString() else "",
+                                    onValueChange = { newVal ->
+                                        val filtered = newVal.filter { it.isDigit() }
+                                        val num = filtered.toIntOrNull()
+                                        if (num != null) {
+                                            gymDueDay = num.coerceIn(1, 31)
+                                        } else if (filtered.isEmpty()) {
+                                            gymDueDay = 1
+                                        }
+                                    },
+                                    label = { Text("Dia", color = TextWhiteSecondary) },
+                                    placeholder = { Text("Ex: 10", color = TextWhiteMuted) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("due_day_direct_input"),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = TextWhitePrimary,
+                                        unfocusedTextColor = TextWhitePrimary,
+                                        focusedBorderColor = NeonRed,
+                                        unfocusedBorderColor = BlackBorder
                                     )
                                 )
-                            }
 
-                            Button(
-                                onClick = { showDatePicker = true },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
-                                modifier = Modifier.testTag("open_calendar_picker_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = "Abrir Calendário",
-                                    tint = TextWhitePrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Calendário",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = TextWhitePrimary
-                                )
+                                Button(
+                                    onClick = { showDatePicker = true },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
+                                    modifier = Modifier
+                                        .height(54.dp)
+                                        .testTag("open_calendar_picker_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarMonth,
+                                        contentDescription = "Abrir Calendário",
+                                        tint = TextWhitePrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Calendário",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = TextWhitePrimary
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Configurado: Todo dia $gymDueDay de cada mês",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = NeonRed,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Status da Mensalidade (Organizado abaixo do título e do valor, com layout limpo e sem aperto lateral)
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Status: $gymStatus",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                            text = "Status da Mensalidade:",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhiteSecondary
+                            )
                         )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             FilterChip(
                                 selected = gymStatus == "Em dia",
                                 onClick = { gymStatus = "Em dia" },
@@ -382,6 +480,17 @@ fun ProfileScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = NeonRed.copy(alpha = 0.3f),
                                     selectedLabelColor = NeonRed,
+                                    containerColor = BlackSurfaceElevated,
+                                    labelColor = TextWhiteSecondary
+                                )
+                            )
+                            FilterChip(
+                                selected = gymStatus == "Pendente",
+                                onClick = { gymStatus = "Pendente" },
+                                label = { Text("Pendente") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = NeonOrange.copy(alpha = 0.3f),
+                                    selectedLabelColor = NeonOrange,
                                     containerColor = BlackSurfaceElevated,
                                     labelColor = TextWhiteSecondary
                                 )
@@ -549,15 +658,177 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    // Campos Diretos e Interativos de Edição de Hora (00-23) e Minutos (00-59)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = BlackSurfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonOrange.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("alarm_time_interactive_editor")
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Ajustar Horário do Alarme (Hora & Minuto Editáveis):",
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted),
+                                modifier = Modifier.align(Alignment.Start)
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                // Coluna de Horas (00-23)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconButton(
+                                        onClick = { gymHour = if (gymHour >= 23) 0 else gymHour + 1 },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Aumentar Hora",
+                                            tint = NeonOrange
+                                        )
+                                    }
+                                    OutlinedTextField(
+                                        value = String.format("%02d", gymHour),
+                                        onValueChange = { newVal ->
+                                            val filtered = newVal.filter { it.isDigit() }
+                                            val num = filtered.toIntOrNull()
+                                            if (num != null) {
+                                                gymHour = num.coerceIn(0, 23)
+                                            } else if (filtered.isEmpty()) {
+                                                gymHour = 0
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .testTag("alarm_hour_direct_input"),
+                                        textStyle = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Black,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            color = NeonOrange
+                                        ),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = NeonOrange,
+                                            unfocusedTextColor = NeonOrange,
+                                            focusedBorderColor = NeonOrange,
+                                            unfocusedBorderColor = BlackBorder
+                                        )
+                                    )
+                                    IconButton(
+                                        onClick = { gymHour = if (gymHour <= 0) 23 else gymHour - 1 },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Diminuir Hora",
+                                            tint = NeonOrange
+                                        )
+                                    }
+                                    Text(
+                                        text = "HORA (0-23)",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextWhiteMuted
+                                    )
+                                }
+
+                                Text(
+                                    text = ":",
+                                    fontSize = 36.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = NeonOrange,
+                                    modifier = Modifier.padding(horizontal = 14.dp)
+                                )
+
+                                // Coluna de Minutos (00-59)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconButton(
+                                        onClick = { gymMinute = if (gymMinute >= 55) 0 else gymMinute + 5 },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Aumentar Minutos",
+                                            tint = NeonOrange
+                                        )
+                                    }
+                                    OutlinedTextField(
+                                        value = String.format("%02d", gymMinute),
+                                        onValueChange = { newVal ->
+                                            val filtered = newVal.filter { it.isDigit() }
+                                            val num = filtered.toIntOrNull()
+                                            if (num != null) {
+                                                gymMinute = num.coerceIn(0, 59)
+                                            } else if (filtered.isEmpty()) {
+                                                gymMinute = 0
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .testTag("alarm_minute_direct_input"),
+                                        textStyle = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Black,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            color = NeonOrange
+                                        ),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = NeonOrange,
+                                            unfocusedTextColor = NeonOrange,
+                                            focusedBorderColor = NeonOrange,
+                                            unfocusedBorderColor = BlackBorder
+                                        )
+                                    )
+                                    IconButton(
+                                        onClick = { gymMinute = if (gymMinute <= 0) 55 else gymMinute - 5 },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Diminuir Minutos",
+                                            tint = NeonOrange
+                                        )
+                                    }
+                                    Text(
+                                        text = "MIN (0-59)",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextWhiteMuted
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = "Horário Programado: ${String.format("%02d:%02d", gymHour, gymMinute)}",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextWhitePrimary
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
-                        text = "Horário Selecionado: ${String.format("%02d:%02d", gymHour, gymMinute)}",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Black,
-                            color = NeonOrange
-                        )
+                        text = "Atalhos Rápidos de Horário:",
+                        style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

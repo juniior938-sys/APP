@@ -132,15 +132,15 @@ fun EntranceVideoScreen(
             .background(PureBlack)
             .testTag("entrance_video_screen")
     ) {
-        // Camada de Imagem de Fundo (Hero Poster do Vídeo)
+        // Camada de Imagem de Fundo (Mulher e Homem frente a frente malhando com halteres)
         Image(
-            painter = painterResource(id = R.drawable.img_ampla_splash_hero),
-            contentDescription = "Abertura Academia Ampla Fitness",
+            painter = painterResource(id = R.drawable.img_ampla_entrance_duo),
+            contentDescription = "Mulher e homem frente a frente treinando com halteres na Ampla Fitness",
             modifier = Modifier
                 .fillMaxSize()
                 .scale(heroScale)
                 .offset(y = verticalPressOffset.dp)
-                .alpha(0.85f),
+                .alpha(0.90f),
             contentScale = ContentScale.Crop
         )
 

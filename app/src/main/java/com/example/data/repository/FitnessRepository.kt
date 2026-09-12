@@ -92,9 +92,10 @@ class FitnessRepository(
         durationMinutes: Int,
         completedExercisesCount: Int,
         totalExercisesCount: Int,
-        notes: String = ""
+        notes: String = "",
+        customCalories: Int? = null
     ): Long {
-        val estimatedCalories = (durationMinutes * 7.5f).toInt().coerceAtLeast(60)
+        val estimatedCalories = customCalories ?: (durationMinutes * 7.5f).toInt().coerceAtLeast(60)
         val log = WorkoutHistoryEntity(
             timestampMillis = System.currentTimeMillis(),
             dayNumber = dayNumber,

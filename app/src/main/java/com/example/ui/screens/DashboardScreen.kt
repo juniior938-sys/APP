@@ -59,12 +59,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ChatMessage
 import com.example.data.model.UserProfile
+import com.example.data.model.WeightLogEntity
 import com.example.data.model.WorkoutDay
+import com.example.data.model.WorkoutHistoryEntity
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
 import com.example.ui.components.AmplaPersonalChatCard
 import com.example.ui.components.BmiCard
+import com.example.ui.components.CalorieAndActivitiesRechartsCard
 import com.example.ui.components.StreakCard
+import com.example.ui.components.WeightBmiEvolutionRechartsCard
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
@@ -86,10 +90,13 @@ fun DashboardScreen(
     weeklyPlan: List<WorkoutDay>,
     chatMessages: List<ChatMessage> = emptyList(),
     isChatLoading: Boolean = false,
+    workoutHistory: List<WorkoutHistoryEntity> = emptyList(),
+    weightLogs: List<WeightLogEntity> = emptyList(),
     onSendMessage: (String) -> Unit = {},
     onClearChat: () -> Unit = {},
     onStartWorkout: (WorkoutDay) -> Unit,
     onLogWeight: (Float) -> Unit,
+    onLogQuickActivity: (title: String, durationMinutes: Int, caloriesBurned: Int, category: String) -> Unit = { _, _, _, _ -> },
     onNavigateToPlan: () -> Unit,
     onNavigateToProfile: () -> Unit = {},
     onTriggerAlarmPopup: () -> Unit = {},
@@ -122,60 +129,58 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Cabeçalho Principal
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "AMPLA PERSONAL IA",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextWhitePrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = NeonRedGlow,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "AMPLA PERSONAL IA",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TextWhitePrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = NeonRedGlow,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "IA Ativa",
-                                    tint = NeonRed,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = "IA ATIVA",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = NeonRed
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "IA Ativa",
+                                tint = NeonRed,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "IA ATIVA",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonRed
+                            )
                         }
                     }
-
-                    Text(
-                        text = "Pronto para o treino de hoje, ${userProfile.name}?",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
-                    )
                 }
 
-                // Tag de Objetivo & Local
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Pronto para o treino de hoje, ${userProfile.name}?",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Tag de Objetivo & Local (Movido para baixo da mensagem de saudação)
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = BlackSurfaceElevated,
                     border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -187,7 +192,7 @@ fun DashboardScreen(
                             tint = NeonOrange,
                             modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "${userProfile.fitnessGoal} • ${userProfile.workoutLocation}",
                             style = MaterialTheme.typography.labelSmall.copy(
@@ -290,13 +295,29 @@ fun DashboardScreen(
                                 style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
                             )
                             Text(
-                                text = "Dia ${userProfile.gymMembershipDueDay} (${userProfile.gymMembershipStatus})",
+                                text = "Todo dia ${userProfile.gymMembershipDueDay}",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = if (userProfile.gymMembershipStatus == "Em dia") NeonGreen else NeonRed
+                                    color = TextWhitePrimary
                                 ),
                                 maxLines = 1
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (userProfile.gymMembershipStatus == "Em dia") NeonGreen.copy(alpha = 0.2f) else NeonRed.copy(alpha = 0.2f),
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, if (userProfile.gymMembershipStatus == "Em dia") NeonGreen else NeonRed)
+                            ) {
+                                Text(
+                                    text = userProfile.gymMembershipStatus,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (userProfile.gymMembershipStatus == "Em dia") NeonGreen else NeonRed,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -311,8 +332,20 @@ fun DashboardScreen(
                 }
             )
 
+            // 1.1 Gráfico Recharts: Evolução de Peso e IMC nas 8 semanas
+            WeightBmiEvolutionRechartsCard(
+                userProfile = userProfile,
+                weightLogs = weightLogs
+            )
+
             // 2. Card de Dias Seguidos (Streak)
             StreakCard(streakStats = streakStats)
+
+            // 2.1 Mini Gráfico Recharts de Perda de Calorias e Lista de Atividades Diárias (com Cardios)
+            CalorieAndActivitiesRechartsCard(
+                workoutHistory = workoutHistory,
+                onLogQuickActivity = onLogQuickActivity
+            )
 
             // 3. Treino Programado para Hoje
             if (todayWorkout != null) {

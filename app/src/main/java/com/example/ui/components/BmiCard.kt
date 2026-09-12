@@ -78,25 +78,24 @@ fun BmiCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(NeonOrangeGlow),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MonitorWeight,
-                            contentDescription = "Ícone IMC",
-                            tint = NeonOrange,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(NeonOrangeGlow),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MonitorWeight,
+                        contentDescription = "Ícone IMC",
+                        tint = NeonOrange,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
                     Text(
                         text = "Índice de Massa Corporal (IMC)",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -104,19 +103,20 @@ fun BmiCard(
                             color = TextWhitePrimary
                         )
                     )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(category.colorHex).copy(alpha = 0.2f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(category.colorHex).copy(alpha = 0.5f))
-                ) {
-                    Text(
-                        text = category.label,
-                        color = Color(category.colorHex),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // Badge movido para logo abaixo do título do IMC
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(category.colorHex).copy(alpha = 0.2f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(category.colorHex).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = category.label,
+                            color = Color(category.colorHex),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 

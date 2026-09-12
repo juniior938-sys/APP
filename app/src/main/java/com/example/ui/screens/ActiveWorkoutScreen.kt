@@ -22,12 +22,17 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +54,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -365,11 +371,17 @@ fun ActiveWorkoutScreen(
                     }
                 }
 
-                // Lista de Exercícios
+                // Lista de Exercícios com Carrossel de Dicas Rápidas
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Carrossel de dicas rápidas para execução correta e prevenção de lesões
+                    item {
+                        WorkoutTipsCarousel()
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
                     itemsIndexed(exercises, key = { index, item -> "active_ex_${index}_${item.id}" }) { index, item ->
                         ActiveExerciseCard(
                             index = index + 1,
@@ -605,6 +617,231 @@ private fun ActiveExerciseCard(
                     Text(
                         text = "Execução: ${exercise.tips}",
                         style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteMuted)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class WorkoutQuickTip(
+    val category: String,
+    val title: String,
+    val description: String,
+    val prevention: String,
+    val accentColor: Color
+)
+
+@Composable
+fun WorkoutTipsCarousel(
+    modifier: Modifier = Modifier
+) {
+    val tips = remember {
+        listOf(
+            WorkoutQuickTip(
+                category = "POSTURA & COLUNA",
+                title = "Mantenha a Coluna Neutra",
+                description = "Contraia o abdômen (bracing) e preserve a curvatura anatômica lombar durante levantamentos, agachamentos e remadas.",
+                prevention = "Previne hérnias discais e compressão aguda nas vértebras lombares.",
+                accentColor = NeonOrange
+            ),
+            WorkoutQuickTip(
+                category = "CADÊNCIA & EXCÊNTRICA",
+                title = "Controle a Descida do Peso",
+                description = "Desça a carga de forma controlada (2 a 3 segundos). O choque brusco na articulação é a maior causa de tendinites.",
+                prevention = "Protege os tendões e ligamentos contra sobrecarga e ruptura por impacto.",
+                accentColor = NeonRed
+            ),
+            WorkoutQuickTip(
+                category = "ALINHAMENTO ARTICULAR",
+                title = "Alinhe os Joelhos com os Pés",
+                description = "Nos agachamentos, leg press e passadas, aponte os joelhos na exata linha da ponta dos pés. Nunca deixe colapsar para dentro.",
+                prevention = "Evita o valgo dinâmico, lesão meniscal e rompimento do LCA.",
+                accentColor = NeonGreen
+            ),
+            WorkoutQuickTip(
+                category = "RESPIRAÇÃO",
+                title = "Expire na Força, Inspire no Retorno",
+                description = "Solte o ar pela boca no ponto de maior esforço e inspire pelo nariz ao retornar o peso para estabilizar a oxigenação.",
+                prevention = "Evita picos súbitos de pressão arterial, fadiga precoce e tonturas.",
+                accentColor = NeonBlue
+            ),
+            WorkoutQuickTip(
+                category = "AMPLITUDE SEGURA",
+                title = "Evite Bloquear Articulações",
+                description = "Não hiperextenda nem trave bruscamente cotovelos ou joelhos no ápice da extensão. Mantenha uma microflexão constante.",
+                prevention = "Transfere o esforço para a musculatura e protege as cápsulas articulares.",
+                accentColor = NeonOrange
+            )
+        )
+    }
+
+    var currentIndex by remember { mutableIntStateOf(0) }
+    val currentTip = tips[currentIndex]
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, currentTip.accentColor.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .testTag("workout_tips_carousel"),
+        colors = CardDefaults.cardColors(containerColor = BlackSurfaceCard)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Cabeçalho da Dica: Ícone + Categoria + Contador
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(currentTip.accentColor.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = "Proteção",
+                            tint = currentTip.accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = currentTip.accentColor.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = currentTip.category,
+                            color = currentTip.accentColor,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Dica ${currentIndex + 1} de ${tips.size}",
+                    style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteMuted)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Título
+            Text(
+                text = currentTip.title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = TextWhitePrimary
+                )
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Descrição da Execução Correta
+            Text(
+                text = currentTip.description,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = TextWhiteSecondary,
+                    lineHeight = 18.sp
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Card de Prevenção de Lesões
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = BlackSurfaceElevated,
+                border = androidx.compose.foundation.BorderStroke(1.dp, currentTip.accentColor.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.WarningAmber,
+                        contentDescription = "Alerta de Lesão",
+                        tint = currentTip.accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = currentTip.prevention,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = currentTip.accentColor,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Navegação do Carrossel (Anterior, Indicadores, Próximo)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        currentIndex = if (currentIndex <= 0) tips.lastIndex else currentIndex - 1
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Dica Anterior",
+                        tint = TextWhiteSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Indicadores de Pontos
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tips.forEachIndexed { idx, _ ->
+                        val isSelected = idx == currentIndex
+                        Box(
+                            modifier = Modifier
+                                .height(6.dp)
+                                .width(if (isSelected) 18.dp else 6.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) currentTip.accentColor else BlackSurfaceElevated)
+                                .clickable { currentIndex = idx }
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = {
+                        currentIndex = if (currentIndex >= tips.lastIndex) 0 else currentIndex + 1
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Próxima Dica",
+                        tint = currentTip.accentColor,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
