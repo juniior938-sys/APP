@@ -258,7 +258,6 @@ fun DashboardScreen(
                 progressPercent = progressPercent,
                 workoutMinutes = todayWorkout?.durationMinutes ?: 45,
                 caloriesBurned = todayCalories,
-                stepsCount = 8752,
                 activeTimeText = "1h 15m"
             )
 

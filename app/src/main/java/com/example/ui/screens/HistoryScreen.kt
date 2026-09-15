@@ -327,41 +327,44 @@ fun HistoryScreen(
                 }
 
                 // ==========================================
-                // ACTIVITY RINGS & STEPS DUAL CARDS (Screen 5)
+                // ACTIVITY RINGS CARD (Screen 5)
                 // ==========================================
                 item {
-                    Row(
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
                     ) {
-                        // Activity Concentric Rings Card
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardWhite),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+                        Column(
+                            modifier = Modifier.padding(18.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Text(
+                                text = "Anéis de Atividade Diária",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkTextPrimary
+                            )
+                            Text(
+                                text = "Consistência de movimento, treino e postura",
+                                fontSize = 12.sp,
+                                color = DarkTextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceAround
                             ) {
-                                Text(
-                                    text = "Anéis de Atividade",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkTextPrimary,
-                                    modifier = Modifier.align(Alignment.Start)
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
                                 // Triple Concentric Rings Canvas
                                 Box(
-                                    modifier = Modifier.size(90.dp),
+                                    modifier = Modifier.size(104.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Canvas(modifier = Modifier.fillMaxSize()) {
-                                        val strokeW = 7.dp.toPx()
+                                        val strokeW = 8.dp.toPx()
 
                                         // Outer Ring - Move (Coral) 75%
                                         drawCircle(
@@ -395,7 +398,7 @@ fun HistoryScreen(
                                         // Inner Ring - Stand (Purple/Blue) 80%
                                         val innerRadius = size.minDimension / 2 - strokeW * 3.1f
                                         drawCircle(
-                                            color = Color(0xFFEDE7F6),
+                                            color = Color(0xFF282C38),
                                             radius = innerRadius,
                                             style = Stroke(strokeW)
                                         )
@@ -409,91 +412,12 @@ fun HistoryScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(10.dp))
-
                                 Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     RingLegendItem("Mover: 520 kcal", CoralPeach)
                                     RingLegendItem("Treino: 45 min", MintGreenDark)
-                                    RingLegendItem("Em Pé: 10 h", PurpleAccent)
-                                }
-                            }
-                        }
-
-                        // Steps Card
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardWhite),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .background(MintGreenLight, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.DirectionsWalk,
-                                            contentDescription = null,
-                                            tint = MintGreenDark,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Passos",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = DarkTextPrimary
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "8,752",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = DarkTextPrimary
-                                )
-
-                                Text(
-                                    text = "▲ 8% vs semana passada",
-                                    fontSize = 11.sp,
-                                    color = MintGreenDark,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Text(
-                                    text = "Meta diária: 10,000",
-                                    fontSize = 11.sp,
-                                    color = DarkTextMuted
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                // Progress bar
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(Color(0xFFE8E5DD))
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(0.87f)
-                                            .height(6.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(MintGreen)
-                                    )
+                                    RingLegendItem("Em Pé: 10 h ativas", PurpleAccent)
                                 }
                             }
                         }

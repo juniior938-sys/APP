@@ -46,7 +46,6 @@ fun TodayProgressCard(
     progressPercent: Int = 75,
     workoutMinutes: Int = 45,
     caloriesBurned: Int = 520,
-    stepsCount: Int = 8752,
     activeTimeText: String = "1h 15m",
     modifier: Modifier = Modifier
 ) {
@@ -128,10 +127,10 @@ fun TodayProgressCard(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // 4 Grid metrics matching the screenshot
+                // 3 Grid metrics matching today's activity
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     MetricRow(
                         dotColor = NeonRed,
@@ -142,11 +141,6 @@ fun TodayProgressCard(
                         dotColor = NeonOrange,
                         label = "Calorias",
                         value = "$caloriesBurned kcal"
-                    )
-                    MetricRow(
-                        dotColor = NeonGold,
-                        label = "Passos",
-                        value = "%,d".format(stepsCount).replace(",", ".")
                     )
                     MetricRow(
                         dotColor = NeonOrangeBright,
