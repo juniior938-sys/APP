@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -55,13 +56,21 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.WeeklyPlanScreen
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurface
+import com.example.ui.theme.CardBorder
+import com.example.ui.theme.CardWhite
+import com.example.ui.theme.DarkTextMuted
+import com.example.ui.theme.DiscreetAppGradient
+import com.example.ui.theme.MintGreen
+import com.example.ui.theme.MintGreenLight
 import com.example.ui.theme.NeonOrange
 import com.example.ui.theme.NeonRed
+import com.example.ui.theme.NeonRedContainer
 import com.example.ui.theme.NeonRedGlow
 import com.example.ui.theme.PureBlack
 import com.example.ui.theme.TextWhiteMuted
 import com.example.ui.theme.TextWhitePrimary
 import com.example.ui.theme.TextWhiteSecondary
+import com.example.ui.theme.WarmCreamBackground
 import kotlinx.coroutines.launch
 
 enum class FitCoachTab(
@@ -215,13 +224,13 @@ fun FitCoachApp(
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing,
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = PureBlack,
+            containerColor = WarmCreamBackground,
             bottomBar = {
                 NavigationBar(
-                    containerColor = BlackSurface,
+                    containerColor = CardWhite,
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .border(1.dp, BlackBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .border(1.dp, CardBorder, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                         .testTag("bottom_navigation_bar")
                 ) {
                     FitCoachTab.values().forEach { tab ->
@@ -245,9 +254,9 @@ fun FitCoachApp(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = NeonRed,
                                 selectedTextColor = NeonRed,
-                                indicatorColor = NeonRedGlow,
-                                unselectedIconColor = TextWhiteMuted,
-                                unselectedTextColor = TextWhiteMuted
+                                indicatorColor = NeonRedContainer,
+                                unselectedIconColor = DarkTextMuted,
+                                unselectedTextColor = DarkTextMuted
                             )
                         )
                     }
@@ -257,6 +266,7 @@ fun FitCoachApp(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(DiscreetAppGradient)
                     .padding(innerPadding)
             ) {
                 AnimatedContent(

@@ -1,70 +1,122 @@
 package com.example.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Pure & Deep Black Backgrounds (Requested PRETO)
-val PureBlack = Color(0xFF000000)
-val BlackSurface = Color(0xFF0C0C0E)
-val BlackSurfaceCard = Color(0xFF141417)
-val BlackSurfaceElevated = Color(0xFF1B1B20)
-val BlackBorder = Color(0xFF2C2C35)
-val BlackBorderLight = Color(0xFF3F3F4D)
+// ==========================================
+// PALETA DARK COM DEGRADÊ, VERMELHO NEON & LARANJA NEON
+// Fundo: Dark Slate / Charcoal com Degradê
+// Detalhes: Vermelho Neon vibrante + Laranja Neon elétrico
+// ==========================================
 
-// Neon Red & Electric Crimson (Requested VERMELHO)
-val NeonRed = Color(0xFFFF1E44)
-val NeonRedBright = Color(0xFFFF3358)
-val NeonRedDark = Color(0xFFC00A28)
-val NeonRedGlow = Color(0x33FF1E44)
+// Degradê de Fundo ("Dark com degrade de fundo")
+val DarkAppBackground = Color(0xFF0C0D11)
+val PureBlack = Color(0xFF08090C)
 
-// Neon Orange & Vivid Amber (Requested LARANJA NEON)
-val NeonOrange = Color(0xFFFF6B00)
-val NeonOrangeBright = Color(0xFFFF851A)
-val NeonOrangeDark = Color(0xFFD65500)
-val NeonOrangeGlow = Color(0x33FF6B00)
-
-// Text Colors
-val TextWhitePrimary = Color(0xFFFFFFFF)
-val TextWhiteSecondary = Color(0xFFA1A1AA)
-val TextWhiteMuted = Color(0xFF71717A)
-
-// Discreto Degradê Três Cores: Preto, Cinza Grafite, Vermelho Sutil
-val GradientBlack = Color(0xFF0A0A0C)
-val GradientCharcoalGray = Color(0xFF18181D)
-val GradientSubtleRed = Color(0xFF280B12)
-
-val DiscreetAppGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+val DiscreetAppGradient = Brush.verticalGradient(
     colors = listOf(
-        GradientBlack,
-        GradientCharcoalGray,
-        GradientSubtleRed
+        Color(0xFF191B22), // Topo grafite escuro texturizado
+        Color(0xFF101217), // Corpo carvão profundo
+        Color(0xFF07080B)  // Base ultra escura
     )
 )
 
-// Status & Accents
-val NeonGold = Color(0xFFFFB800)
-val NeonGreen = Color(0xFF10B981)
-val NeonBlue = Color(0xFF00D2FF)
+// Superfícies e Cards Dark
+val CardDark = Color(0xFF14161C)
+val CardDarkElevated = Color(0xFF1B1E26)
+val CardBorder = Color(0xFF282C38)
+val CardBorderSubtle = Color(0xFF1E212A)
 
-// Compatibility aliases mapped to Neon Red & Neon Orange
+// Vermelho Neon (Destaque Principal)
+val NeonRed = Color(0xFFFF1E44)
+val NeonRedBright = Color(0xFFFF3358)
+val NeonRedDark = Color(0xFFD6002A)
+val NeonRedGlow = Color(0x33FF1E44)
+val NeonRedContainer = Color(0xFF2E0F15)
+
+// Laranja Neon (Destaque Secundário & Energia)
+val NeonOrange = Color(0xFFFF6D00)
+val NeonOrangeBright = Color(0xFFFF851A)
+val NeonOrangeDark = Color(0xFFD65800)
+val NeonOrangeGlow = Color(0x33FF6D00)
+val NeonOrangeContainer = Color(0xFF2D1609)
+
+// Destaques de apoio
+val NeonGold = Color(0xFFFFAB00)
+val NeonGoldContainer = Color(0xFF2B1F07)
+
+// Activity Rings (Move 🔴 Neon Red, Exercise 🟠 Neon Orange, Stand 🟡 Neon Gold)
+val RingMoveRed = Color(0xFFFF1E44)
+val RingExerciseGreen = Color(0xFFFF6D00)
+val RingStandBlue = Color(0xFFFFAB00)
+
+// Tipografia para Fundo Dark (Alto Contraste e Legibilidade)
+val DarkTextPrimary = Color(0xFFFFFFFF)
+val DarkTextSecondary = Color(0xFFA6AEBD)
+val DarkTextMuted = Color(0xFF6B7485)
+
+val TextWhitePrimary = DarkTextPrimary
+val TextWhiteSecondary = DarkTextSecondary
+val TextWhiteMuted = DarkTextMuted
+
+// ==========================================
+// COMPATIBILIDADE COM TELAS E COMPONENTES
+// ==========================================
+val WarmCreamBackground = DarkAppBackground
+val WarmCreamSurface = CardDark
+val CardWhite = CardDark
+val BlackSurface = CardDark
+val BlackSurfaceCard = CardDark
+val BlackSurfaceElevated = CardDarkElevated
+val BlackBorder = CardBorder
+val BlackBorderLight = CardBorderSubtle
+
+// Mapeamentos para detalhes Neon Red
+val MintGreen = NeonRed
+val MintGreenLight = NeonRedContainer
+val MintGreenDark = NeonRedBright
+val MintGreenGlow = NeonRedGlow
+val NeonGreen = NeonRed
+val NeonGreenLight = NeonRedContainer
+val NeonGreenDark = NeonRedBright
+
+// Mapeamentos para detalhes Neon Orange
+val CoralPeach = NeonOrange
+val CoralPeachLight = NeonOrangeContainer
+val CoralPeachDark = NeonOrangeBright
+val CoralPeachGlow = NeonOrangeGlow
+
+val PurpleAccent = NeonRedBright
+val PurpleLight = NeonRedContainer
+val AmberAccent = NeonOrangeBright
+val AmberLight = NeonOrangeContainer
+val BlueAccent = NeonOrange
+val BlueLight = NeonOrangeContainer
+val NeonBlue = NeonOrange
+
 val EmeraldPrimary = NeonRed
-val EmeraldLight = NeonRedBright
-val EmeraldDark = NeonRedDark
+val EmeraldLight = NeonRedContainer
+val EmeraldDark = NeonRedBright
 val CyanSecondary = NeonOrange
-val CyanLight = NeonOrangeBright
-val CyanDark = NeonOrangeDark
+val CyanLight = NeonOrangeContainer
+val CyanDark = NeonOrangeBright
 val FlameAccent = NeonOrange
-val AmberStreak = NeonOrangeBright
+val AmberStreak = NeonOrange
 val RoseHighlight = NeonRed
-val SlateDarkBackground = PureBlack
-val SlateDarkSurface = BlackSurface
-val SlateDarkSurfaceVariant = BlackSurfaceCard
-val SlateDarkBorder = BlackBorder
-val SlateDarkTextPrimary = TextWhitePrimary
-val SlateDarkTextSecondary = TextWhiteSecondary
-val SlateLightBackground = PureBlack
-val SlateLightSurface = BlackSurface
-val SlateLightSurfaceVariant = BlackSurfaceCard
-val SlateLightBorder = BlackBorder
-val SlateLightTextPrimary = TextWhitePrimary
-val SlateLightTextSecondary = TextWhiteSecondary
+
+val SlateDarkBackground = DarkAppBackground
+val SlateDarkSurface = CardDark
+val SlateDarkSurfaceVariant = CardDarkElevated
+val SlateDarkBorder = CardBorder
+val SlateDarkTextPrimary = DarkTextPrimary
+val SlateDarkTextSecondary = DarkTextSecondary
+
+val SlateLightBackground = DarkAppBackground
+val SlateLightSurface = CardDark
+val SlateLightSurfaceVariant = CardDarkElevated
+val SlateLightBorder = CardBorder
+val SlateLightTextPrimary = DarkTextPrimary
+val SlateLightTextSecondary = DarkTextSecondary
+
+
 

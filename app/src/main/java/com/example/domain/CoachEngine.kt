@@ -10,6 +10,16 @@ object CoachEngine {
     fun generateWeeklyPlan(profile: UserProfile): List<WorkoutDay> {
         val isGym = profile.workoutLocation.contains("Academia", ignoreCase = true) ||
                 profile.workoutLocation.equals("Gym", ignoreCase = true)
+        val isFemale = profile.gender.contains("Feminino", ignoreCase = true)
+
+        if (isGym) {
+            return if (isFemale) {
+                generateFemaleWeeklySplit(profile)
+            } else {
+                generateMaleSingleBodyPartSplit(profile)
+            }
+        }
+
         val goal = profile.fitnessGoal
         val level = profile.fitnessLevel
 
@@ -22,6 +32,142 @@ object CoachEngine {
                 generateEndurancePlan(profile, isGym, level)
             else -> generateMuscleGainPlan(profile, isGym, level) // Padrão Ganho de Massa
         }
+    }
+
+    private fun generateMaleSingleBodyPartSplit(profile: UserProfile): List<WorkoutDay> {
+        return listOf(
+            WorkoutDay(
+                dayNumber = 1,
+                dayTitle = "Segunda: Peito",
+                name = "CHEST (Peitoral Maior & Superior)",
+                focus = "6 Exercícios de Supinos e Crucifixos",
+                durationMinutes = 45,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleChestExercises
+            ),
+            WorkoutDay(
+                dayNumber = 2,
+                dayTitle = "Terça: Costas",
+                name = "BACK (Costas, Dorsais & Trapézio)",
+                focus = "6 Exercícios de Puxadas, Barra e Terra",
+                durationMinutes = 45,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleBackExercises
+            ),
+            WorkoutDay(
+                dayNumber = 3,
+                dayTitle = "Quarta: Ombros",
+                name = "SHOULDERS (Deltoides & Trapézio)",
+                focus = "5 Exercícios de Desenvolvimento e Elevação",
+                durationMinutes = 40,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleShouldersExercises
+            ),
+            WorkoutDay(
+                dayNumber = 4,
+                dayTitle = "Quinta: Pernas",
+                name = "LEGS (Quadríceps, Posterior & Panturrilha)",
+                focus = "6 Exercícios de Agachamento, Leg e Flexora",
+                durationMinutes = 50,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleLegsExercises
+            ),
+            WorkoutDay(
+                dayNumber = 5,
+                dayTitle = "Sexta: Braços",
+                name = "BICEPS + TRICEPS (Braços de Aço)",
+                focus = "Roscas Diretas, Martelo, Tríceps Testa e Polia",
+                durationMinutes = 45,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleBicepsExercises.take(3) + ExerciseCatalogData.maleTricepsExercises.take(3)
+            ),
+            WorkoutDay(
+                dayNumber = 6,
+                dayTitle = "Sábado: Abdômen & Cardio",
+                name = "ABS + CARDIO (Definição de Core)",
+                focus = "5 Exercícios de Abdômen e Queima Metabólica",
+                durationMinutes = 35,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.maleAbsExercises
+            ),
+            WorkoutDay(
+                dayNumber = 7,
+                dayTitle = "Domingo: Descanso",
+                name = "REST (Recuperação Muscular Ativa)",
+                focus = "Alongamento, Sono e Hidratação",
+                durationMinutes = 20,
+                isRestDay = true,
+                exercises = emptyList()
+            )
+        )
+    }
+
+    private fun generateFemaleWeeklySplit(profile: UserProfile): List<WorkoutDay> {
+        return listOf(
+            WorkoutDay(
+                dayNumber = 1,
+                dayTitle = "Segunda: Glúteos & Posterior",
+                name = "GLÚTEOS & POSTERIORES (Construção & Firmeza)",
+                focus = "Elevação Pélvica, Agachamento Búlgaro e Stiff",
+                durationMinutes = 45,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleGlutesExercises
+            ),
+            WorkoutDay(
+                dayNumber = 2,
+                dayTitle = "Terça: Costas & Postura",
+                name = "SUPERIORES FEMININO & POSTURA ELEGANTE",
+                focus = "Puxada Frontal, Remada Baixa e Face Pull",
+                durationMinutes = 40,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleUpperExercises
+            ),
+            WorkoutDay(
+                dayNumber = 3,
+                dayTitle = "Quarta: Cardio & Cintura Fina",
+                name = "CARDIO HIIT & VÁCUO ABDOMINAL",
+                focus = "Esteira Inclinada, Corda Naval e Stomach Vacuum",
+                durationMinutes = 35,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleCardioExercises.take(2) + ExerciseCatalogData.femaleAbsAndWaistExercises.take(3)
+            ),
+            WorkoutDay(
+                dayNumber = 4,
+                dayTitle = "Quinta: Quadríceps & Coxas",
+                name = "QUADRÍCEPS & PERNAS TORNEADAS",
+                focus = "Agachamento Sumô, Leg Press 45° e Passada",
+                durationMinutes = 45,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleLegsExercises
+            ),
+            WorkoutDay(
+                dayNumber = 5,
+                dayTitle = "Sexta: Glúteos Isolados & Braços",
+                name = "GLÚTEOS ISOLADOS & BRAÇOS DEFINIDOS",
+                focus = "Cadeira Abdutora, Coice na Polia, Elevação Lateral e Tríceps Corda",
+                durationMinutes = 40,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleGlutesExercises.takeLast(3) + ExerciseCatalogData.femaleUpperExercises.takeLast(3)
+            ),
+            WorkoutDay(
+                dayNumber = 6,
+                dayTitle = "Sábado: Abdômen & Cardio",
+                name = "ABDÔMEN PLANO & QUEIMA DE GORDURA",
+                focus = "Prancha Lateral, Abdominal Bicicleta e Esteira Inclinada",
+                durationMinutes = 30,
+                isRestDay = false,
+                exercises = ExerciseCatalogData.femaleAbsAndWaistExercises.take(3) + ExerciseCatalogData.femaleCardioExercises.take(2)
+            ),
+            WorkoutDay(
+                dayNumber = 7,
+                dayTitle = "Domingo: Descanso",
+                name = "DESCANSO ATIVO & MOBILIDADE",
+                focus = "Caminhada leve e alongamento miofascial",
+                durationMinutes = 20,
+                isRestDay = true,
+                exercises = emptyList()
+            )
+        )
     }
 
     private fun generateWeightLossPlan(profile: UserProfile, isGym: Boolean, level: String): List<WorkoutDay> {

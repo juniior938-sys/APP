@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,20 +26,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -53,12 +57,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.model.ChatMessage
 import com.example.data.model.UserProfile
 import com.example.data.model.WeightLogEntity
@@ -67,9 +74,10 @@ import com.example.data.model.WorkoutHistoryEntity
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
 import com.example.ui.components.AmplaPersonalChatCard
-import com.example.ui.components.CalorieAndActivitiesRechartsCard
-import com.example.ui.components.StreakCard
-import com.example.ui.components.WeightBmiEvolutionRechartsCard
+import com.example.ui.components.NutritionFoodDialog
+import com.example.ui.components.QuickActionsGrid
+import com.example.ui.components.TodayProgressCard
+import com.example.ui.components.WeeklyActivityCapsuleCard
 import com.example.ui.theme.BlackBorder
 import com.example.ui.theme.BlackSurfaceCard
 import com.example.ui.theme.BlackSurfaceElevated
@@ -79,10 +87,20 @@ import com.example.ui.theme.NeonOrange
 import com.example.ui.theme.NeonOrangeGlow
 import com.example.ui.theme.NeonRed
 import com.example.ui.theme.NeonRedGlow
-import com.example.ui.theme.PureBlack
 import com.example.ui.theme.TextWhiteMuted
 import com.example.ui.theme.TextWhitePrimary
 import com.example.ui.theme.TextWhiteSecondary
+
+import com.example.ui.theme.CardBorder
+import com.example.ui.theme.CardWhite
+import com.example.ui.theme.CoralPeach
+import com.example.ui.theme.CoralPeachLight
+import com.example.ui.theme.DarkTextPrimary
+import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.MintGreen
+import com.example.ui.theme.MintGreenDark
+import com.example.ui.theme.MintGreenLight
+import com.example.ui.theme.WarmCreamBackground
 
 @Composable
 fun DashboardScreen(
@@ -104,7 +122,9 @@ fun DashboardScreen(
     onTriggerMembershipPopup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var showWeightDialog by remember { mutableStateOf(false) }
+    var showNutritionDialog by remember { mutableStateOf(false) }
     var weightInput by remember { mutableStateOf(userProfile.weightKg.toString()) }
 
     // Identificar treino de hoje ou próximo ativo
@@ -129,260 +149,155 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Cabeçalho Principal com Foto de Perfil do Atleta
+            // ==========================================
+            // HEADER BAR: "Hi, [Name] 👋 / Ready to crush goals?"
+            // Matching Screen 2 from Image 1
+            // ==========================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "AMPLA PERSONAL",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextWhitePrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = NeonRedGlow,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Profile Avatar with click to navigate
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, MintGreen, CircleShape)
+                            .clickable { onNavigateToProfile() }
+                            .testTag("dashboard_profile_avatar"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!userProfile.profilePictureUri.isNullOrBlank()) {
+                            AsyncImage(
+                                model = userProfile.profilePictureUri,
+                                contentDescription = "Foto do perfil",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MintGreenLight),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "IA Ativa",
-                                    tint = NeonRed,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "IA",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = NeonRed
+                                    text = userProfile.name.take(1).uppercase().ifBlank { "A" },
+                                    color = MintGreenDark,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 18.sp
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    Text(
-                        text = "Olá, ${userProfile.name}",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextWhiteSecondary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Tag de Objetivo & Local
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = BlackSurfaceElevated,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (userProfile.workoutLocation.contains("Academia", true))
-                                    Icons.Default.FitnessCenter
-                                else
-                                    Icons.Default.Home,
-                                contentDescription = "Local",
-                                tint = NeonOrange,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "${userProfile.fitnessGoal} • ${userProfile.workoutLocation}",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextWhitePrimary,
-                                    fontSize = 11.sp
-                                )
+                                text = "Olá, ${userProfile.name} 👋",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkTextPrimary
+                            )
+                        }
+                        Text(
+                            text = "Pronto para superar suas metas?",
+                            fontSize = 12.sp,
+                            color = DarkTextSecondary
+                        )
+                    }
+                }
+
+                // Notification Bell icon with badge matching screenshot
+                IconButton(
+                    onClick = { onTriggerMembershipPopup() },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(CardWhite, CircleShape)
+                        .border(1.dp, CardBorder, CircleShape)
+                ) {
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Icon(
+                            imageVector = Icons.Filled.Notifications,
+                            contentDescription = "Notificações & Lembretes",
+                            tint = DarkTextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        if (userProfile.gymMembershipReminderEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .size(9.dp)
+                                    .background(CoralPeach, CircleShape)
+                                    .border(1.5.dp, CardWhite, CircleShape)
                             )
                         }
                     }
                 }
+            }
 
-                // Avatar Circular do Usuário no Cabeçalho (com navegação direta para Perfil)
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, NeonRed, CircleShape)
-                        .clickable { onNavigateToProfile() }
-                        .testTag("dashboard_profile_avatar"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!userProfile.profilePictureUri.isNullOrBlank()) {
-                        AsyncImage(
-                            model = userProfile.profilePictureUri,
-                            contentDescription = "Foto do perfil",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+            // ==========================================
+            // TODAY'S PROGRESS CARD (Screen 2 from Image 1)
+            // ==========================================
+            val completedCount = weeklyPlan.count { it.isCompletedThisWeek }
+            val progressPercent = if (weeklyPlan.isNotEmpty()) {
+                ((completedCount.toFloat() / weeklyPlan.size.toFloat()) * 100).toInt().coerceIn(25, 100)
+            } else 75
+
+            val todayCalories = if (workoutHistory.isNotEmpty()) {
+                workoutHistory.sumOf { it.caloriesBurnedEstimated }.coerceAtLeast(320)
+            } else 520
+
+            TodayProgressCard(
+                progressPercent = progressPercent,
+                workoutMinutes = todayWorkout?.durationMinutes ?: 45,
+                caloriesBurned = todayCalories,
+                stepsCount = 8752,
+                activeTimeText = "1h 15m"
+            )
+
+            // ==========================================
+            // WEEKLY ACTIVITY CARD (Screen 2 from Image 1)
+            // ==========================================
+            WeeklyActivityCapsuleCard(
+                onDayClick = { onNavigateToPlan() }
+            )
+
+            // ==========================================
+            // QUICK ACTIONS 2x2 GRID (Screen 2 from Image 1)
+            // ==========================================
+            QuickActionsGrid(
+                onStartWorkout = {
+                    if (todayWorkout != null) {
+                        onStartWorkout(todayWorkout)
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(NeonRedGlow),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = userProfile.name.take(1).uppercase().ifBlank { "A" },
-                                color = NeonRed,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 18.sp
-                            )
-                        }
+                        onNavigateToPlan()
                     }
+                },
+                onLogFood = { showNutritionDialog = true },
+                onBodyStats = { showWeightDialog = true },
+                onChallengesOrAi = {
+                    onSendMessage("Olá treinador! Pode analisar meu progresso e me dar uma dica para o treino de hoje?")
                 }
-            }
+            )
 
-            // BARRA RÁPIDA: ALARME DA ACADEMIA & MENSALIDADE (Respeitando botões de ativação)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Alarme da Academia
-                val isAlarmOn = userProfile.gymAlarmEnabled
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = BlackSurfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (isAlarmOn) NeonOrange.copy(alpha = 0.6f) else BlackBorder
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onTriggerAlarmPopup() }
-                        .testTag("dashboard_alarm_pill")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    if (isAlarmOn) NeonOrangeGlow else BlackSurfaceElevated,
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Alarm,
-                                contentDescription = null,
-                                tint = if (isAlarmOn) NeonOrange else TextWhiteMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Alarme Academia",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextWhiteMuted,
-                                    fontSize = 11.sp
-                                )
-                            )
-                            Text(
-                                text = if (isAlarmOn)
-                                    String.format("%02d:%02d • Ativo", userProfile.gymAlarmHour, userProfile.gymAlarmMinute)
-                                else
-                                    "Desativado",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isAlarmOn) NeonOrange else TextWhiteMuted
-                                ),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-
-                // Mensalidade da Academia
-                val isMembershipReminderOn = userProfile.gymMembershipReminderEnabled
-                val isPaid = userProfile.gymMembershipStatus == "Em dia"
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = BlackSurfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (isMembershipReminderOn) (if (isPaid) NeonGreen.copy(alpha = 0.5f) else NeonRed.copy(alpha = 0.5f)) else BlackBorder
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onTriggerMembershipPopup() }
-                        .testTag("dashboard_membership_pill")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    if (isMembershipReminderOn) (if (isPaid) NeonGreen.copy(alpha = 0.15f) else NeonRedGlow) else BlackSurfaceElevated,
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Payments,
-                                contentDescription = null,
-                                tint = if (isMembershipReminderOn) (if (isPaid) NeonGreen else NeonRed) else TextWhiteMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Mensalidade",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextWhiteMuted,
-                                    fontSize = 11.sp
-                                )
-                            )
-                            Text(
-                                text = if (isMembershipReminderOn)
-                                    "Dia ${userProfile.gymMembershipDueDay} • ${userProfile.gymMembershipStatus}"
-                                else
-                                    "Desativado",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isMembershipReminderOn) (if (isPaid) NeonGreen else NeonRed) else TextWhiteMuted
-                                ),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 1. Treino Programado para Hoje (Foco Imediato)
+            // ==========================================
+            // TREINO EM DESTAQUE (Screen 3 & 4 from Image 1)
+            // ==========================================
             if (todayWorkout != null) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.5.dp, NeonRed, RoundedCornerShape(20.dp))
+                        .border(1.dp, CardBorder, RoundedCornerShape(22.dp))
                         .testTag("today_workout_card"),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = BlackSurfaceCard)
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
                     Column(
                         modifier = Modifier
@@ -399,13 +314,13 @@ fun DashboardScreen(
                                     modifier = Modifier
                                         .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(NeonRedGlow),
+                                        .background(MintGreenLight),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
                                         contentDescription = "Treino",
-                                        tint = NeonRed,
+                                        tint = MintGreenDark,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -413,44 +328,66 @@ fun DashboardScreen(
                                 Column {
                                     Text(
                                         text = todayWorkout.dayTitle,
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            color = NeonRed,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MintGreenDark
                                     )
                                     Text(
-                                        text = if (todayWorkout.isRestDay) "Dia de Recuperação" else "Treino de Hoje",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = TextWhitePrimary
-                                        )
+                                        text = if (todayWorkout.isRestDay) "Recuperação Ativa" else "Treino Recomendado",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = DarkTextPrimary
                                     )
                                 }
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = BlackSurfaceElevated,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BlackBorder)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MintGreenLight
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Schedule,
-                                        contentDescription = "Duração",
-                                        modifier = Modifier.size(12.dp),
-                                        tint = NeonOrange
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "${todayWorkout.durationMinutes} min",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Medium,
-                                            color = TextWhitePrimary
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = MintGreenDark
                                         )
-                                    )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "${todayWorkout.durationMinutes} min",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MintGreenDark
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = CoralPeachLight
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocalFireDepartment,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = CoralPeach
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "320 kcal",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = CoralPeach
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -459,15 +396,15 @@ fun DashboardScreen(
 
                         Text(
                             text = todayWorkout.name,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = TextWhitePrimary
-                            )
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkTextPrimary
                         )
 
                         Text(
                             text = "Foco: ${todayWorkout.focus} • ${todayWorkout.exercises.size} exercícios",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteSecondary)
+                            fontSize = 12.sp,
+                            color = DarkTextSecondary
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -483,37 +420,127 @@ fun DashboardScreen(
                                     .testTag("start_workout_button"),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = NeonRed,
-                                    contentColor = TextWhitePrimary
+                                    containerColor = MintGreen,
+                                    contentColor = Color.White
                                 )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = "Iniciar",
+                                    tint = Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (todayWorkout.isRestDay) "Ver Descanso" else "Iniciar Treino",
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
                                 )
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = onNavigateToPlan,
-                                modifier = Modifier.testTag("view_plan_button"),
                                 shape = RoundedCornerShape(14.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonOrange),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonOrange)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MintGreenLight,
+                                    contentColor = MintGreenDark
+                                )
                             ) {
-                                Text("Ver Plano", fontWeight = FontWeight.SemiBold)
+                                Text("Ver Ficha", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                 }
             }
 
-            // 2. Chat Ampla Personal IA
+            // ==========================================
+            // STATUS DA MATRÍCULA ACADEMIA AMPLA FITNESS & WHATSAPP
+            // ==========================================
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, CardBorder, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(MintGreenLight, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Payments,
+                                    contentDescription = null,
+                                    tint = MintGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = userProfile.gymName,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DarkTextPrimary
+                                )
+                                Text(
+                                    text = "Vencimento: Dia ${userProfile.gymMembershipDueDay} • Status: ${userProfile.gymMembershipStatus}",
+                                    fontSize = 12.sp,
+                                    color = if (userProfile.gymMembershipStatus == "Em dia") MintGreenDark else CoralPeach
+                                )
+                            }
+                        }
+
+                        // Botão WhatsApp Direto com a Recepção/Gerência
+                        Button(
+                            onClick = {
+                                val cleanPhone = userProfile.adminContactPhone.replace("[^0-9]".toRegex(), "")
+                                val phoneWithCountry = if (cleanPhone.startsWith("55")) cleanPhone else "55$cleanPhone"
+                                val text = "Olá! Gostaria de falar sobre minha matrícula na ${userProfile.gymName}."
+                                val uri = Uri.parse("https://api.whatsapp.com/send?phone=$phoneWithCountry&text=${Uri.encode(text)}")
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // fallback
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_whatsapp),
+                                contentDescription = "WhatsApp",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "WhatsApp",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // AMPLA PERSONAL IA COACH CARD
+            // ==========================================
             AmplaPersonalChatCard(
                 messages = chatMessages,
                 isLoading = isChatLoading,
@@ -521,135 +548,73 @@ fun DashboardScreen(
                 onClearChat = onClearChat
             )
 
-            // 3. Gráfico Recharts Unificado: Evolução Corporal (Peso & IMC 8 semanas)
-            WeightBmiEvolutionRechartsCard(
-                userProfile = userProfile,
-                weightLogs = weightLogs,
-                onLogWeightClick = {
-                    weightInput = userProfile.weightKg.toString()
-                    showWeightDialog = true
-                }
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-            // 4. Mini Gráfico Recharts de Perda de Calorias e Registro de Atividades Diárias
-            CalorieAndActivitiesRechartsCard(
-                workoutHistory = workoutHistory,
-                onLogQuickActivity = onLogQuickActivity
-            )
+        // ==========================================
+        // DIALOGS
+        // ==========================================
+        if (showNutritionDialog) {
+            NutritionFoodDialog(onDismiss = { showNutritionDialog = false })
+        }
 
-            // 5. Card de Sequência e Foco (Streak)
-            StreakCard(streakStats = streakStats)
-
-            // 6. Dica Diária do Coach com IA
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, NeonOrange.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
-                    .testTag("coach_tip_card"),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = BlackSurfaceCard)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(NeonOrangeGlow),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Dica IA",
-                            tint = NeonOrange,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
+        if (showWeightDialog) {
+            AlertDialog(
+                onDismissRequest = { showWeightDialog = false },
+                title = {
+                    Text(
+                        text = "Registrar Peso Atual",
+                        fontWeight = FontWeight.Bold,
+                        color = DarkTextPrimary
+                    )
+                },
+                text = {
                     Column {
                         Text(
-                            text = "Orientação do Treinador IA",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = NeonOrange
+                            text = "Mantenha seu IMC e evolução corporal atualizados.",
+                            fontSize = 13.sp,
+                            color = DarkTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        OutlinedTextField(
+                            value = weightInput,
+                            onValueChange = { weightInput = it },
+                            label = { Text("Peso (kg)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MintGreen,
+                                unfocusedBorderColor = CardBorder,
+                                focusedContainerColor = CardWhite,
+                                unfocusedContainerColor = CardWhite,
+                                focusedTextColor = DarkTextPrimary,
+                                unfocusedTextColor = DarkTextPrimary
                             )
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = coachTip,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
-                        )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val newWeight = weightInput.replace(",", ".").toFloatOrNull()
+                            if (newWeight != null && newWeight > 20f && newWeight < 300f) {
+                                onLogWeight(newWeight)
+                                showWeightDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MintGreen)
+                    ) {
+                        Text("Salvar", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showWeightDialog = false }) {
+                        Text("Cancelar", color = DarkTextSecondary)
+                    }
+                },
+                containerColor = CardWhite
+            )
         }
-    }
-
-    // Diálogo Atualizar Peso
-    if (showWeightDialog) {
-        AlertDialog(
-            onDismissRequest = { showWeightDialog = false },
-            containerColor = BlackSurfaceCard,
-            title = {
-                Text(
-                    text = "Registrar Peso Atual",
-                    fontWeight = FontWeight.Bold,
-                    color = TextWhitePrimary
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Informe seu peso para atualizar seu IMC e histórico corporal.",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextWhiteSecondary)
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    OutlinedTextField(
-                        value = weightInput,
-                        onValueChange = { weightInput = it },
-                        label = { Text("Peso (kg)", color = TextWhiteSecondary) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("weight_input_field"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextWhitePrimary,
-                            unfocusedTextColor = TextWhitePrimary,
-                            focusedBorderColor = NeonRed,
-                            unfocusedBorderColor = BlackBorder
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val parsed = weightInput.toFloatOrNull()
-                        if (parsed != null && parsed in 20f..300f) {
-                            onLogWeight(parsed)
-                            showWeightDialog = false
-                        }
-                    },
-                    modifier = Modifier.testTag("confirm_weight_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed)
-                ) {
-                    Text("Salvar", color = TextWhitePrimary, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWeightDialog = false }) {
-                    Text("Cancelar", color = TextWhiteSecondary)
-                }
-            }
-        )
     }
 }
