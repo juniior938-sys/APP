@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.WorkoutDay
@@ -131,16 +132,19 @@ fun ActiveWorkoutScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = TextWhitePrimary
                             ),
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "${workoutDay.dayTitle} • ${workoutDay.durationMinutes} min",
-                                style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteSecondary)
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextWhiteSecondary),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             if (workoutElapsedSeconds > 0) {
                                 Text(
-                                    text = " • Em andamento: $elapsedFormatted",
+                                    text = " • $elapsedFormatted",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = NeonOrange,
                                         fontWeight = FontWeight.Bold
@@ -539,7 +543,7 @@ private fun ActiveExerciseCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             Checkbox(
                 checked = exercise.isCompleted,
@@ -548,7 +552,9 @@ private fun ActiveExerciseCard(
                     checkedColor = NeonGreen,
                     uncheckedColor = TextWhiteMuted
                 ),
-                modifier = Modifier.testTag("exercise_checkbox_$index")
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .testTag("exercise_checkbox_$index")
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -556,45 +562,35 @@ private fun ActiveExerciseCard(
             ExerciseThumbnailBadge(
                 exerciseName = exercise.name,
                 equipment = exercise.equipment,
-                size = 42.dp
+                size = 42.dp,
+                modifier = Modifier.padding(top = 2.dp)
             )
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$index. ${exercise.name}",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (exercise.isCompleted) TextWhiteSecondary else TextWhitePrimary,
-                            textDecoration = if (exercise.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = NeonOrange.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = exercise.equipment,
-                            color = NeonOrange,
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                // Título do exercício em largura total, perfeitamente horizontal
+                Text(
+                    text = "$index. ${exercise.name}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (exercise.isCompleted) TextWhiteSecondary else TextWhitePrimary,
+                        textDecoration = if (exercise.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Séries, repetições e descanso
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "${exercise.sets} Séries × ${exercise.reps}",
@@ -606,17 +602,37 @@ private fun ActiveExerciseCard(
 
                     if (exercise.restSeconds > 0) {
                         Text(
-                            text = "${exercise.restSeconds}s descanso",
+                            text = "• ${exercise.restSeconds}s descanso",
                             style = MaterialTheme.typography.labelMedium.copy(color = TextWhiteSecondary)
                         )
                     }
                 }
 
+                // Equipamento exibido horizontalmente em etiqueta destacada
+                if (exercise.equipment.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = NeonOrange.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = exercise.equipment,
+                            color = NeonOrange,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
                 if (exercise.tips.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Execução: ${exercise.tips}",
-                        style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteMuted)
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextWhiteMuted),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
