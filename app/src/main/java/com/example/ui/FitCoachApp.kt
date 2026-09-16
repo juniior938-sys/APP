@@ -18,10 +18,12 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -49,6 +51,7 @@ import com.example.ui.components.GymPaymentReminderDialog
 import com.example.ui.components.MembershipBlockedOverlay
 import com.example.ui.components.WaterIntakeReminderDialog
 import com.example.ui.screens.ActiveWorkoutScreen
+import com.example.ui.screens.ChatScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.EntranceVideoScreen
 import com.example.ui.screens.HistoryScreen
@@ -80,7 +83,8 @@ enum class FitCoachTab(
     val testTag: String
 ) {
     DASHBOARD("Início", Icons.Filled.Dashboard, Icons.Outlined.Dashboard, "tab_dashboard"),
-    PLAN("Plano", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "tab_plan"),
+    PLAN("Treinos", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "tab_plan"),
+    CHAT("Chat IA", Icons.Filled.SmartToy, Icons.Outlined.SmartToy, "tab_chat"),
     HISTORY("Histórico", Icons.Filled.History, Icons.Outlined.History, "tab_history"),
     PROFILE("Perfil", Icons.Filled.Person, Icons.Outlined.Person, "tab_profile")
 }
@@ -299,6 +303,7 @@ fun FitCoachApp(
                                 }
                             },
                             onNavigateToPlan = { currentTab = FitCoachTab.PLAN },
+                            onNavigateToChat = { currentTab = FitCoachTab.CHAT },
                             onNavigateToProfile = { currentTab = FitCoachTab.PROFILE },
                             onTriggerAlarmPopup = { viewModel.triggerGymAlarmNow() },
                             onTriggerMembershipPopup = { viewModel.triggerMembershipReminderNow() }
@@ -315,6 +320,14 @@ fun FitCoachApp(
                                     snackbarHostState.showSnackbar("Plano semanal recalibrado com sucesso!")
                                 }
                             }
+                        )
+
+                        FitCoachTab.CHAT -> ChatScreen(
+                            userProfile = userProfile,
+                            messages = chatMessages,
+                            isLoading = isChatLoading,
+                            onSendMessage = { text -> viewModel.sendChatMessage(text) },
+                            onClearChat = { viewModel.clearChatHistory() }
                         )
 
                         FitCoachTab.HISTORY -> HistoryScreen(

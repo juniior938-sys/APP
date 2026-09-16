@@ -74,7 +74,6 @@ import com.example.data.model.WorkoutDay
 import com.example.data.model.WorkoutHistoryEntity
 import com.example.data.repository.StreakStats
 import com.example.domain.CoachEngine
-import com.example.ui.components.AmplaPersonalChatCard
 import com.example.ui.components.NutritionFoodDialog
 import com.example.ui.components.QuickActionsGrid
 import com.example.ui.components.TodayProgressCard
@@ -118,6 +117,7 @@ fun DashboardScreen(
     onLogWeight: (Float) -> Unit,
     onLogQuickActivity: (title: String, durationMinutes: Int, caloriesBurned: Int, category: String) -> Unit = { _, _, _, _ -> },
     onNavigateToPlan: () -> Unit,
+    onNavigateToChat: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onTriggerAlarmPopup: () -> Unit = {},
     onTriggerMembershipPopup: () -> Unit = {},
@@ -282,9 +282,7 @@ fun DashboardScreen(
                 },
                 onLogFood = { showNutritionDialog = true },
                 onBodyStats = { showWeightDialog = true },
-                onChallengesOrAi = {
-                    onSendMessage("Olá treinador! Pode analisar meu progresso e me dar uma dica para o treino de hoje?")
-                }
+                onChallengesOrAi = onNavigateToChat
             )
 
             // ==========================================
@@ -548,16 +546,6 @@ fun DashboardScreen(
                     }
                 }
             }
-
-            // ==========================================
-            // AMPLA PERSONAL IA COACH CARD
-            // ==========================================
-            AmplaPersonalChatCard(
-                messages = chatMessages,
-                isLoading = isChatLoading,
-                onSendMessage = onSendMessage,
-                onClearChat = onClearChat
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }
