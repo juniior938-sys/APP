@@ -69,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
@@ -78,9 +79,6 @@ import com.example.R
 import com.example.data.model.UserProfile
 import com.example.data.model.WorkoutDay
 import com.example.data.model.WorkoutExercise
-import com.example.domain.ExerciseCatalogData
-import com.example.domain.ExerciseCategoryGroup
-import com.example.ui.components.SingleBodyPartExerciseDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.CardWhite
 import com.example.ui.theme.CoralPeach
@@ -105,40 +103,40 @@ fun WeeklyPlanScreen(
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember {
-        mutableStateOf(if (userProfile.gender.contains("Feminino", true)) "Mulher 🏋️‍♀️" else "Homem 🏋️‍♂️")
-    }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Fichas por Músculo, 1 = Divisão Semanal
-    var selectedCategoryForDetail by remember { mutableStateOf<ExerciseCategoryGroup?>(null) }
+    var selectedFilter by remember { mutableStateOf("Todos") }
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
 
-    // Obter todos os grupos masculinos e femininos
-    val maleGroups = ExerciseCatalogData.allMaleGroups
-    val femaleGroups = ExerciseCatalogData.allFemaleGroups
-    val allCatalogGroups = maleGroups + femaleGroups
+    val filterOptions = listOf(
+        "Todos",
+        "Peito",
+        "Costas",
+        "Pernas & Glúteos",
+        "Ombros",
+        "Braços",
+        "Abdômen",
+        "Cardio"
+    )
 
-    // Filtragem de catálogo
-    val filteredCatalog = remember(searchQuery, selectedFilter) {
-        allCatalogGroups.filter { group ->
-            // Filtro de gênero/categoria
+    // Filtragem da Lista Principal de Treinos
+    val filteredWeeklyPlan = remember(weeklyPlan, searchQuery, selectedFilter) {
+        weeklyPlan.filter { day ->
             val matchesFilter = when (selectedFilter) {
-                "Homem 🏋️‍♂️" -> group.gender == "Masculino"
-                "Mulher 🏋️‍♀️" -> group.gender == "Feminino"
-                "Peito" -> group.muscleGroup.contains("Peito", true)
-                "Costas" -> group.muscleGroup.contains("Costas", true)
-                "Pernas & Glúteos" -> group.muscleGroup.contains("Pernas", true) || group.muscleGroup.contains("Glúteos", true)
-                "Ombros" -> group.muscleGroup.contains("Ombros", true)
-                "Braços" -> group.muscleGroup.contains("Bíceps", true) || group.muscleGroup.contains("Tríceps", true)
-                "Abdômen" -> group.muscleGroup.contains("Abdômen", true)
-                "Cardio" -> group.muscleGroup.contains("Cardio", true)
+                "Todos" -> true
+                "Peito" -> day.focus.contains("Peito", true) || day.name.contains("Peito", true) || day.exercises.any { it.targetMuscle.contains("Peito", true) }
+                "Costas" -> day.focus.contains("Costas", true) || day.name.contains("Costas", true) || day.exercises.any { it.targetMuscle.contains("Costas", true) }
+                "Pernas & Glúteos" -> day.focus.contains("Perna", true) || day.focus.contains("Glúteo", true) || day.name.contains("Perna", true) || day.exercises.any { it.targetMuscle.contains("Perna", true) || it.targetMuscle.contains("Glúteo", true) || it.targetMuscle.contains("Quadríceps", true) }
+                "Ombros" -> day.focus.contains("Ombro", true) || day.name.contains("Ombro", true) || day.exercises.any { it.targetMuscle.contains("Ombro", true) || it.targetMuscle.contains("Deltoide", true) }
+                "Braços" -> day.focus.contains("Braço", true) || day.focus.contains("Bíceps", true) || day.focus.contains("Tríceps", true) || day.name.contains("Braço", true) || day.exercises.any { it.targetMuscle.contains("Bíceps", true) || it.targetMuscle.contains("Tríceps", true) }
+                "Abdômen" -> day.focus.contains("Abdômen", true) || day.name.contains("Abdômen", true) || day.exercises.any { it.targetMuscle.contains("Abdômen", true) || it.targetMuscle.contains("Core", true) }
+                "Cardio" -> day.focus.contains("Cardio", true) || day.name.contains("Cardio", true) || day.exercises.any { it.targetMuscle.contains("Cardio", true) }
                 else -> true
             }
 
-            // Filtro de busca textual
             val matchesQuery = if (searchQuery.isBlank()) true else {
-                group.title.contains(searchQuery, true) ||
-                        group.subtitle.contains(searchQuery, true) ||
-                        group.exercises.any { it.name.contains(searchQuery, true) || it.targetMuscle.contains(searchQuery, true) }
+                day.name.contains(searchQuery, true) ||
+                        day.focus.contains(searchQuery, true) ||
+                        day.dayTitle.contains(searchQuery, true) ||
+                        day.exercises.any { it.name.contains(searchQuery, true) || it.targetMuscle.contains(searchQuery, true) }
             }
 
             matchesFilter && matchesQuery
@@ -157,25 +155,31 @@ fun WeeklyPlanScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
-            // Header Bar: "Workouts & Exercícios"
+            // Header Bar: "Plano de Treinos Principal"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Treinos & Exercícios",
-                        fontSize = 22.sp,
+                        text = "Lista Principal de Treinos",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DarkTextPrimary
+                        color = DarkTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Fichas masculinas e femininas completas",
+                        text = "Divisão Semanal Personalizada • ${userProfile.name}",
                         fontSize = 12.sp,
-                        color = DarkTextSecondary
+                        color = DarkTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 FilledTonalButton(
                     onClick = onRegeneratePlan,
@@ -207,13 +211,13 @@ fun WeeklyPlanScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Search Bar matching Screen 3 from Image 1
+            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 placeholder = {
                     Text(
-                        text = "Buscar exercícios (ex: Supino, Stiff, Rosca)...",
+                        text = "Buscar nos treinos (ex: Supino, Stiff, Rosca)...",
                         fontSize = 13.sp,
                         color = DarkTextMuted
                     )
@@ -253,20 +257,7 @@ fun WeeklyPlanScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Filter Pills matching Screen 3 from Image 1
-            val filterOptions = listOf(
-                "Homem 🏋️‍♂️",
-                "Mulher 🏋️‍♀️",
-                "Todos",
-                "Peito",
-                "Costas",
-                "Pernas & Glúteos",
-                "Ombros",
-                "Braços",
-                "Abdômen",
-                "Cardio"
-            )
-
+            // Filter Pills
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -275,7 +266,6 @@ fun WeeklyPlanScreen(
             ) {
                 filterOptions.forEach { filter ->
                     val isSelected = selectedFilter == filter
-                    val isFemaleFilter = filter.contains("Mulher")
 
                     FilterChip(
                         selected = isSelected,
@@ -291,12 +281,12 @@ fun WeeklyPlanScreen(
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = CardWhite,
                             labelColor = DarkTextSecondary,
-                            selectedContainerColor = if (isFemaleFilter) CoralPeach else MintGreen,
+                            selectedContainerColor = MintGreen,
                             selectedLabelColor = Color.White
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             borderColor = CardBorder,
-                            selectedBorderColor = if (isFemaleFilter) CoralPeach else MintGreen,
+                            selectedBorderColor = MintGreen,
                             enabled = true,
                             selected = isSelected
                         )
@@ -304,296 +294,47 @@ fun WeeklyPlanScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Tabs: Fichas por Músculo vs Divisão Semanal
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = MintGreen,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = MintGreen,
-                        height = 3.dp
-                    )
-                },
-                divider = {}
-            ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text(
-                            text = "Fichas por Músculo (${filteredCatalog.size})",
-                            fontSize = 13.sp,
-                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 0) MintGreenDark else DarkTextSecondary
-                        )
-                    }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            text = "Divisão Semanal (${weeklyPlan.size} Dias)",
-                            fontSize = 13.sp,
-                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 1) MintGreenDark else DarkTextSecondary
-                        )
-                    }
-                )
-            }
-
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Conteúdo da Aba Selecionada
-            if (selectedTab == 0) {
-                // ==========================================
-                // FICHAS POR MÚSCULO (SINGLE BODY PART WORKOUT)
-                // Fiel à Imagem 2 (Homem) & Foco Glúteos/Pernas (Mulher)
-                // ==========================================
-                if (filteredCatalog.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Nenhum exercício encontrado para '$searchQuery'",
-                            color = DarkTextSecondary,
-                            fontSize = 14.sp
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        itemsIndexed(filteredCatalog, key = { _, group -> group.id }) { _, group ->
-                            ExerciseCategoryCard(
-                                group = group,
-                                onClick = { selectedCategoryForDetail = group },
-                                onStartWorkout = {
-                                    val workoutDay = WorkoutDay(
-                                        dayNumber = 1,
-                                        dayTitle = group.gender,
-                                        name = group.title,
-                                        focus = group.subtitle,
-                                        durationMinutes = group.durationMinutes,
-                                        isRestDay = false,
-                                        exercises = group.exercises,
-                                        isCompletedThisWeek = false
-                                    )
-                                    onStartWorkout(workoutDay)
-                                }
-                            )
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(24.dp))
-                        }
-                    }
-                }
-            } else {
-                // ==========================================
-                // DIVISÃO SEMANAL (SEGUNDA A DOMINGO)
-                // ==========================================
-                if (weeklyPlan.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MintGreen)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        itemsIndexed(weeklyPlan, key = { index, day -> "plan_day_${index}_${day.dayNumber}_${day.name.hashCode()}" }) { _, day ->
-                            val isExpanded = expandedStates[day.dayNumber] ?: (day.dayNumber == 1)
-
-                            WeeklySplitDayCard(
-                                day = day,
-                                isExpanded = isExpanded,
-                                onToggleExpand = {
-                                    expandedStates[day.dayNumber] = !isExpanded
-                                },
-                                onStartWorkout = { onStartWorkout(day) }
-                            )
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(24.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        // Modal com detalhes da ficha de exercícios
-        selectedCategoryForDetail?.let { group ->
-            SingleBodyPartExerciseDialog(
-                group = group,
-                onDismiss = { selectedCategoryForDetail = null },
-                onStartWorkout = { day ->
-                    onStartWorkout(day)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExerciseCategoryCard(
-    group: ExerciseCategoryGroup,
-    onClick: () -> Unit,
-    onStartWorkout: () -> Unit
-) {
-    val isFemale = group.gender.contains("Feminino", true)
-    val accentColor = if (isFemale) CoralPeach else MintGreen
-    val accentLight = if (isFemale) CoralPeachLight else MintGreenLight
-    val accentDark = if (isFemale) CoralPeachDark else MintGreenDark
-    val imageRes = if (isFemale) R.drawable.img_workout_woman else R.drawable.img_workout_man
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(accentLight, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FitnessCenter,
-                            contentDescription = null,
-                            tint = accentDark,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
+            // ==========================================
+            // ÚNICA LISTA DE TREINO PRINCIPAL (DIVISÃO SEMANAL COMPLETA)
+            // ==========================================
+            if (filteredWeeklyPlan.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = group.title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DarkTextPrimary
+                        text = "Nenhum treino encontrado para a busca",
+                        color = DarkTextSecondary,
+                        fontSize = 14.sp
                     )
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    itemsIndexed(filteredWeeklyPlan, key = { index, day -> "plan_day_${index}_${day.dayNumber}_${day.name.hashCode()}" }) { _, day ->
+                        val isExpanded = expandedStates[day.dayNumber] ?: (day.dayNumber == 1)
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "${group.gender} • ${group.exercises.size} Exercícios",
-                    fontSize = 12.sp,
-                    color = DarkTextSecondary
-                )
-
-                Text(
-                    text = group.subtitle,
-                    fontSize = 11.sp,
-                    color = DarkTextMuted
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MintGreenLight
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Schedule,
-                                contentDescription = null,
-                                tint = MintGreenDark,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = "${group.durationMinutes} min",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MintGreenDark
-                            )
-                        }
+                        WeeklySplitDayCard(
+                            day = day,
+                            isExpanded = isExpanded,
+                            onToggleExpand = {
+                                expandedStates[day.dayNumber] = !isExpanded
+                            },
+                            onStartWorkout = { onStartWorkout(day) }
+                        )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = CoralPeachLight
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.LocalFireDepartment,
-                                contentDescription = null,
-                                tint = CoralPeach,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = "${group.caloriesEstimate} kcal",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = CoralPeach
-                            )
-                        }
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            // Right side thumbnail image matching Screen 3 from reference image
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(accentLight)
-            ) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = group.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Icon(
-                imageVector = Icons.Filled.ChevronRight,
-                contentDescription = "Abrir",
-                tint = DarkTextMuted,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }
@@ -619,7 +360,7 @@ private fun WeeklySplitDayCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -654,30 +395,39 @@ private fun WeeklySplitDayCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = day.dayTitle,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MintGreenDark
+                            color = MintGreenDark,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = day.name,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DarkTextPrimary
+                            color = DarkTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = day.focus,
                             fontSize = 11.sp,
-                            color = DarkTextSecondary
+                            color = DarkTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                IconButton(onClick = onToggleExpand) {
+                IconButton(
+                    onClick = onToggleExpand,
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = "Expandir",
@@ -687,9 +437,9 @@ private fun WeeklySplitDayCard(
             }
 
             AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 14.dp)) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
                     HorizontalDivider(color = CardBorder)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     day.exercises.forEachIndexed { idx, ex ->
                         Row(
@@ -710,22 +460,28 @@ private fun WeeklySplitDayCard(
                                     text = ex.name,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = DarkTextPrimary
+                                    color = DarkTextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = "${ex.sets} séries × ${ex.reps} • ${ex.equipment}",
                                     fontSize = 11.sp,
-                                    color = DarkTextSecondary
+                                    color = DarkTextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
                         onClick = onStartWorkout,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MintGreen,
@@ -742,7 +498,8 @@ private fun WeeklySplitDayCard(
                         Text(
                             text = if (day.isRestDay) "Ver Descanso" else "Iniciar Treino do Dia",
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 13.sp
                         )
                     }
                 }

@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -308,7 +309,10 @@ fun DashboardScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .size(38.dp)
@@ -333,12 +337,16 @@ fun DashboardScreen(
                                     )
                                     Text(
                                         text = if (todayWorkout.isRestDay) "Recuperação Ativa" else "Treino Recomendado",
-                                        fontSize = 15.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = DarkTextPrimary
+                                        color = DarkTextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.width(8.dp))
 
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Surface(
@@ -469,70 +477,74 @@ fun DashboardScreen(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(MintGreenLight, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Payments,
-                                    contentDescription = null,
-                                    tint = MintGreen,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = userProfile.gymName,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkTextPrimary
-                                )
-                                Text(
-                                    text = "Vencimento: Dia ${userProfile.gymMembershipDueDay} • Status: ${userProfile.gymMembershipStatus}",
-                                    fontSize = 12.sp,
-                                    color = if (userProfile.gymMembershipStatus == "Em dia") MintGreenDark else CoralPeach
-                                )
-                            }
-                        }
-
-                        // Botão WhatsApp Direto com a Recepção/Gerência
-                        Button(
-                            onClick = {
-                                val cleanPhone = userProfile.adminContactPhone.replace("[^0-9]".toRegex(), "")
-                                val phoneWithCountry = if (cleanPhone.startsWith("55")) cleanPhone else "55$cleanPhone"
-                                val text = "Olá! Gostaria de falar sobre minha matrícula na ${userProfile.gymName}."
-                                val uri = Uri.parse("https://api.whatsapp.com/send?phone=$phoneWithCountry&text=${Uri.encode(text)}")
-                                val intent = Intent(Intent.ACTION_VIEW, uri)
-                                try {
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // fallback
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(MintGreenLight, CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_whatsapp),
-                                contentDescription = "WhatsApp",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "WhatsApp",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                imageVector = Icons.Filled.Payments,
+                                contentDescription = null,
+                                tint = MintGreen,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = userProfile.gymName,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkTextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Vencimento: Dia ${userProfile.gymMembershipDueDay} • Status: ${userProfile.gymMembershipStatus}",
+                                fontSize = 12.sp,
+                                color = if (userProfile.gymMembershipStatus == "Em dia") MintGreenDark else CoralPeach,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Botão WhatsApp Direto com a Recepção/Gerência posicionado ABAIXO do Vencimento
+                    Button(
+                        onClick = {
+                            val cleanPhone = userProfile.adminContactPhone.replace("[^0-9]".toRegex(), "")
+                            val phoneWithCountry = if (cleanPhone.startsWith("55")) cleanPhone else "55$cleanPhone"
+                            val text = "Olá! Gostaria de falar sobre minha matrícula na ${userProfile.gymName}."
+                            val uri = Uri.parse("https://api.whatsapp.com/send?phone=$phoneWithCountry&text=${Uri.encode(text)}")
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // fallback
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_whatsapp),
+                            contentDescription = "WhatsApp",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Falar no WhatsApp da Recepção",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
                 }
             }
